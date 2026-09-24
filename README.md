@@ -9,7 +9,10 @@ View and reorganise an iPhone Home Screen from a Mac over USB.
 
 It reads your iPhone layout into local files, displays it in a browser editor, and lets you prepare a new layout before applying it. Applying is always a separate, deliberate action. Optionally, Screen Time data can rank apps so frequently used apps are placed first.
 
-![The editor: the proposed layout with Screen Time on each app, the Tray, and notes for Claude](docs/editor.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/editor-dark.png">
+  <img src="docs/editor.png" alt="The editor: the proposed layout with Screen Time on each app, the Tray, and notes for Claude">
+</picture>
 
 ## What you can do
 

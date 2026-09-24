@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Home Screen Organizer</title>
+<script>
+(function () {
+  var THEME_KEY = 'homescreen.theme'
+  var theme = 'light'
+  var queryTheme = new URLSearchParams(location.search).get('theme')
+  if (queryTheme === 'light' || queryTheme === 'dark') theme = queryTheme
+  else {
+    try {
+      var stored = localStorage.getItem(THEME_KEY)
+      if (stored === 'light' || stored === 'dark') theme = stored
+    } catch (error) {}
+  }
+  document.documentElement.setAttribute('data-theme', theme)
+})()
+</script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkhvbWUgU2NyZWVuIE9yZ2FuaXplciI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InRpbGUiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMjU2M2ViIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMC41NSIgc3RvcC1jb2xvcj0iIzFkNGVkOCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNzI1NTQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgcng9IjEwIiBmaWxsPSJ1cmwoI3RpbGUpIi8+CiAgPGcgZmlsbD0iI2JmZGJmZSIgZmlsbC1vcGFjaXR5PSIwLjM1Ij4KICAgIDxyZWN0IHg9IjUiIHk9IjUiIHdpZHRoPSI3LjMzIiBoZWlnaHQ9IjcuMzMiIHJ4PSIyIi8+CiAgICA8cmVjdCB4PSIxNC4zMyIgeT0iNSIgd2lkdGg9IjcuMzMiIGhlaWdodD0iNy4zMyIgcng9IjIiLz4KICAgIDxyZWN0IHg9IjIzLjY3IiB5PSI1IiB3aWR0aD0iNy4zMyIgaGVpZ2h0PSI3LjMzIiByeD0iMiIvPgogICAgPHJlY3QgeD0iNSIgeT0iMTQuMzMiIHdpZHRoPSI3LjMzIiBoZWlnaHQ9IjcuMzMiIHJ4PSIyIi8+CiAgICA8cmVjdCB4PSI1IiB5PSIyMy42NyIgd2lkdGg9IjcuMzMiIGhlaWdodD0iNy4zMyIgcng9IjIiLz4KICAgIDxyZWN0IHg9IjE0LjMzIiB5PSIyMy42NyIgd2lkdGg9IjcuMzMiIGhlaWdodD0iNy4zMyIgcng9IjIiLz4KICAgIDxyZWN0IHg9IjIzLjY3IiB5PSIyMy42NyIgd2lkdGg9IjcuMzMiIGhlaWdodD0iNy4zMyIgcng9IjIiLz4KICA8L2c+CiAgPHJlY3QgeD0iMTQuMzMiIHk9IjE0LjMzIiB3aWR0aD0iNy4zMyIgaGVpZ2h0PSI3LjMzIiByeD0iMiIgZmlsbD0iIzYwYTVmYSIvPgogIDxyZWN0IHg9IjI0LjE3IiB5PSIxNC44MyIgd2lkdGg9IjYuMzMiIGhlaWdodD0iNi4zMyIgcng9IjEuNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYmZkYmZlIiBzdHJva2Utb3BhY2l0eT0iMC41NSIgc3Ryb2tlLWRhc2hhcnJheT0iMS42IDEuMiIvPgogIDxjaXJjbGUgY3g9IjI3LjMzIiBjeT0iMTgiIHI9IjEuNiIgZmlsbD0iI2Y1OWUwYiIvPgo8L3N2Zz4K">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,7 +29,9 @@
     color-scheme: dark;
     /* Navy scale from the design mockup, mapped onto ReUI/shadcn's dark theme steps
        (ground < panel < panel-raised < surface-hover), with the brand blue reserved for
-       actions/focus/selection and amber for Screen Time and notes accents. */
+       actions/focus/selection and amber for Screen Time and notes accents. Every one of
+       these is redefined under [data-theme="light"] below, except the brand-* tokens:
+       the logo tile's own gradient/tint stays identical in both themes. */
     --ground: #070a12;
     --canvas-top: #0b0f19;
     --panel: #111827;
@@ -27,11 +44,42 @@
     --accent: #3b82f6;
     --accent-strong: #2563eb;
     --accent-soft: #60a5fa;
+    --accent-bright: #5b9bf8;
     --accent-foreground: #ffffff;
+    --accent-rgb: 59, 130, 246;
     --danger: #ff6467;
     --ok: #34d399;
     --note: #f59e0b;
     --note-soft: #fbbf24;
+    --header-bg: rgba(11, 15, 25, .9);
+    --screen-bg: #0d1322;
+    --screen-border: rgba(51, 65, 85, .6);
+    --screen-shadow: 0 20px 40px -15px rgba(0, 0, 0, .7);
+    --screen-head-text: #c7c9d6;
+    --dock-well: rgba(7, 10, 18, .55);
+    --icon-hover-shadow: rgba(0, 0, 0, .35);
+    --label-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+    --badge-bg: rgba(7, 10, 18, .9);
+    --badge-border: rgba(245, 158, 11, .4);
+    --folder-tile-bg: rgba(255, 255, 255, .22);
+    --folder-tile-border: transparent;
+    --tray-bg: rgba(255, 255, 255, .025);
+    --tray-inset-shadow: inset 0 3px 14px rgba(0, 0, 0, .55);
+    --ring-cutout: rgba(10, 12, 20, .75);
+    --folder-name-focus-bg: rgba(255, 255, 255, .08);
+    --folder-page-bg: rgba(255, 255, 255, .14);
+    --folder-page-border: transparent;
+    --dock-bar-bg: rgba(17, 24, 39, .65);
+    --dock-bar-border: rgba(255, 255, 255, .14);
+    --brand-grad-1: #2563eb;
+    --brand-grad-2: #1d4ed8;
+    --brand-grad-3: #172554;
+    --brand-glow: rgba(59, 130, 246, .45);
+    --brand-glow-strong: rgba(59, 130, 246, .65);
+    --brand-cell: rgba(191, 219, 254, .35);
+    --brand-cell-active: #60a5fa;
+    --brand-dashed: rgba(191, 219, 254, .55);
+    --brand-dot: #f59e0b;
     --icon: 58px;
     --radius: 13px;
     --radius-sm: 8px;
@@ -47,6 +95,55 @@
     --h-md: 33px;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    /* ReUI's light scale: white cards on a soft cool-grey ground, slate borders and
+       text, brand blue #2563eb for actions/selection/links. Brand-* tokens are not
+       redefined here on purpose - the logo tile stays identical in both themes. */
+    --ground: #f5f7fb;
+    --canvas-top: #eef2f8;
+    --panel: #ffffff;
+    --panel-raised: #f8fafc;
+    --surface-hover: #ffffff;
+    --line: #e2e8f0;
+    --line-strong: #cbd5e1;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --accent-strong: #1d4ed8;
+    --accent-soft: #2563eb;
+    --accent-bright: #3b82f6;
+    --accent-rgb: 37, 99, 235;
+    --danger: #dc2626;
+    --ok: #16a34a;
+    --note: #d97706;
+    --note-soft: #b45309;
+    --header-bg: rgba(255, 255, 255, .9);
+    --screen-bg: #eef2f8;
+    --screen-border: #e2e8f0;
+    --screen-shadow: 0 12px 28px -10px rgba(15, 23, 42, .12);
+    --screen-head-text: #1e293b;
+    --dock-well: rgba(15, 23, 42, .05);
+    --icon-hover-shadow: rgba(15, 23, 42, .18);
+    --label-shadow: none;
+    --badge-bg: #fffbeb;
+    --badge-border: #fcd34d;
+    --folder-tile-bg: rgba(226, 232, 240, .7);
+    --folder-tile-border: var(--line);
+    --tray-bg: rgba(15, 23, 42, .02);
+    --tray-inset-shadow: inset 0 2px 8px rgba(15, 23, 42, .06);
+    --ring-cutout: rgba(255, 255, 255, .9);
+    --folder-name-focus-bg: rgba(15, 23, 42, .06);
+    --folder-page-bg: #ffffff;
+    --folder-page-border: var(--line);
+    --dock-bar-bg: rgba(255, 255, 255, .65);
+    --dock-bar-border: rgba(15, 23, 42, .08);
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, .06);
+    --shadow-md: 0 8px 24px rgba(15, 23, 42, .08);
+    --shadow-lg: 0 24px 48px rgba(15, 23, 42, .14);
+    --glow-accent: 0 0 10px -2px rgba(37, 99, 235, .35);
+    --glow-accent-strong: 0 0 16px -3px rgba(37, 99, 235, .45);
+  }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--ground); color: var(--text); font-size: 14px; -webkit-font-smoothing: antialiased; }
@@ -55,23 +152,33 @@
 
   header {
     position: sticky; top: 0; z-index: 5;
-    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-    min-height: 64px; padding: 10px 20px; background: rgba(11, 15, 25, .9); backdrop-filter: blur(12px);
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; overflow: hidden;
+    height: 64px; padding: 10px 20px; background: var(--header-bg); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--line);
   }
+  header[data-collapse-search] .search { width: 160px; }
+  header[data-collapse-wordmark] .brand-word { display: none; }
+  header[data-collapse-status] .status-text { display: none; }
+  header[data-collapse-restore] #restore,
+  header[data-collapse-reload] #reload,
+  header[data-collapse-theme] #theme-toggle,
+  header[data-collapse-undo] #undo,
+  header[data-collapse-screentime] #usage-toggle { display: none !important; }
+  #more-menu-btn[hidden] { display: none; }
+  header > * { flex: none; }
   .brand { display: inline-flex; align-items: center; gap: 10px; margin: 0 8px 0 0; text-decoration: none; color: inherit; }
   .brand-mark {
     width: 36px; height: 36px; padding: 5px; border-radius: 10px; flex: none;
     display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 2px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #172554 100%);
-    box-shadow: 0 0 10px -2px rgba(59, 130, 246, .45);
+    background: linear-gradient(135deg, var(--brand-grad-1) 0%, var(--brand-grad-2) 55%, var(--brand-grad-3) 100%);
+    box-shadow: 0 0 10px -2px var(--brand-glow);
     transition: box-shadow .2s ease;
   }
-  .brand:hover .brand-mark { box-shadow: 0 0 16px -2px rgba(59, 130, 246, .65); }
-  .brand-cell { border-radius: 2px; background: rgba(191, 219, 254, .35); }
-  .brand-cell.active { background: #60a5fa; animation: brand-pulse 2.6s ease-in-out infinite; }
-  .brand-cell.dashed { background: none; border: 1px dashed rgba(191, 219, 254, .55); display: grid; place-items: center; }
-  .brand-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--note); }
+  .brand:hover .brand-mark { box-shadow: 0 0 16px -2px var(--brand-glow-strong); }
+  .brand-cell { border-radius: 2px; background: var(--brand-cell); }
+  .brand-cell.active { background: var(--brand-cell-active); animation: brand-pulse 2.6s ease-in-out infinite; }
+  .brand-cell.dashed { background: none; border: 1px dashed var(--brand-dashed); display: grid; place-items: center; }
+  .brand-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--brand-dot); }
   @keyframes brand-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
   @media (prefers-reduced-motion: reduce) { .brand-cell.active { animation: none; } }
   .brand-word { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; }
@@ -86,16 +193,12 @@
   .search::placeholder { color: var(--muted); }
   .toggle { display: inline-flex; align-items: center; gap: 6px; height: var(--h-md); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 14px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500; }
   .toggle-icon { color: var(--note); }
-  .toggle[aria-pressed="true"] { color: var(--accent-soft); border-color: rgba(59, 130, 246, .3); background: var(--panel-raised); }
+  .toggle[aria-pressed="true"] { color: var(--accent-soft); border-color: rgba(var(--accent-rgb), .3); background: var(--panel-raised); }
   .spacer { flex: 1; }
-  .status { color: var(--muted); font-size: 13px; }
+  .status { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 13px; white-space: nowrap; flex: none; }
+  .status .status-icon { flex: none; }
   .status.unsaved { color: var(--note); }
-  .status.status-ok { display: inline-flex; align-items: center; gap: 5px; color: var(--ok); }
-  .status.status-ok::before {
-    content: ""; width: 12px; height: 12px; background: currentColor; flex: none;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/%3E%3Cpolyline points='22 4 12 14.01 9 11.01'/%3E%3C/svg%3E") center/contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/%3E%3Cpolyline points='22 4 12 14.01 9 11.01'/%3E%3C/svg%3E") center/contain no-repeat;
-  }
+  .status.status-ok { color: var(--ok); }
   .primary {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--h-md);
     background: var(--accent); color: var(--accent-foreground); border: 0; border-radius: var(--radius-sm);
@@ -115,13 +218,46 @@
     box-shadow: var(--glow-accent);
   }
   #apply-to-phone:hover:not(:disabled) {
-    background: linear-gradient(135deg, #5b9bf8 0%, var(--accent) 100%);
+    background: linear-gradient(135deg, var(--accent-bright) 0%, var(--accent) 100%);
     box-shadow: var(--glow-accent-strong);
   }
   .icon-inline { width: 14px; height: 14px; flex: none; }
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center; width: var(--h-md); height: var(--h-md);
+    background: none; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--muted); cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .icon-btn:hover { background: var(--panel-raised); color: var(--text); border-color: var(--line); }
+  .icon-btn .icon-inline { width: 16px; height: 16px; }
 
   main { display: flex; flex-wrap: wrap; gap: 24px; padding: 20px; align-items: flex-start; background: linear-gradient(180deg, var(--canvas-top) 0%, var(--ground) 65%); }
-  .screens { flex: 1 1 640px; display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; min-width: 0; }
+  .screens { flex: 1 1 640px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .pages-grid { display: grid; grid-template-columns: repeat(auto-fill, 300px); align-items: start; gap: 22px; }
+
+  /* The Dock floats like a real iPhone dock: fixed to the viewport bottom, centered over
+     the pages column (not the side panel), frosted so pages are still legible sliding
+     underneath. Its rendered height feeds back into .screens' padding-bottom so the
+     last row of pages never sits behind it - see layoutDockBar(). */
+  .dock-bar { position: fixed; z-index: 8; bottom: 16px; display: flex; justify-content: center; pointer-events: none; }
+  .dock-bar-inner {
+    pointer-events: auto; display: inline-flex; align-items: center; width: fit-content;
+    padding: 8px 16px 8px 12px; border-radius: 24px;
+    background: var(--dock-bar-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--dock-bar-border); box-shadow: var(--shadow-lg);
+  }
+  .dock-bar { --icon: 54px; }
+  .dock-bar .screen { display: flex; align-items: center; width: auto; padding: 0; border: 0; box-shadow: none; background: none; border-radius: 0; }
+  .dock-bar .screen-head { padding: 0 10px 0 2px; font-size: 9px; line-height: 1.3; }
+  .dock-bar .dock .grid {
+    min-height: 0; grid-auto-rows: 78px; grid-template-columns: repeat(4, 54px); gap: 10px;
+    padding: 0; background: none; border: 0; border-radius: 14px;
+  }
+  @media (max-width: 480px) {
+    .dock-bar { --icon: 42px; bottom: 10px; }
+    .dock-bar-inner { padding: 6px 10px 6px 8px; }
+    .dock-bar .dock .grid { grid-auto-rows: 62px; grid-template-columns: repeat(4, 42px); gap: 6px; }
+    .dock-bar .screen-head { padding-right: 6px; }
+  }
   aside {
     flex: 0 1 340px; min-width: 280px; display: flex; flex-direction: column; gap: 16px;
     position: sticky; top: 76px; z-index: 11;
@@ -132,21 +268,21 @@
 
   .screen {
     width: 300px; padding: 14px 12px 16px; border-radius: 32px;
-    background: #0d1322;
-    border: 1px solid rgba(51, 65, 85, .6); box-shadow: 0 20px 40px -15px rgba(0, 0, 0, .7);
+    background: var(--screen-bg);
+    border: 1px solid var(--screen-border); box-shadow: var(--screen-shadow);
   }
-  .screen-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 10px 10px; font-size: 11px; font-weight: 500; letter-spacing: .02em; color: #c7c9d6; }
-  .count { display: inline-flex; align-items: center; background: var(--panel-raised); color: var(--muted); border-radius: var(--radius-full); padding: 2px 9px; font-size: 11px; font-weight: 500; }
+  .screen-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 10px 10px; font-size: 11px; font-weight: 500; letter-spacing: .02em; color: var(--screen-head-text); }
+  .count { display: inline-flex; align-items: center; background: var(--panel-raised); color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-full); padding: 2px 9px; font-size: 11px; font-weight: 500; }
   .count.full { color: var(--note-soft); }
   .count.over { color: var(--danger); font-weight: 600; }
   .screen-head button { background: none; border: 0; color: var(--danger); cursor: pointer; font-size: 11px; font-weight: 500; }
   .grid { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 98px; row-gap: 4px; min-height: calc(98px * 6 + 4px * 5); border-radius: 18px; }
-  .grid.target { background: rgba(59, 130, 246, .12); outline: 2px dashed rgba(59, 130, 246, .55); outline-offset: -2px; }
+  .grid.target { background: rgba(var(--accent-rgb), .12); outline: 2px dashed rgba(var(--accent-rgb), .55); outline-offset: -2px; }
   .grid.target::after {
     content: ""; position: absolute; top: 10px; right: 10px; width: 8px; height: 8px;
-    border-radius: 50%; background: var(--note); box-shadow: 0 0 0 2px rgba(10, 14, 26, .7);
+    border-radius: 50%; background: var(--note); box-shadow: 0 0 0 2px var(--ring-cutout);
   }
-  .dock .grid { min-height: 0; grid-auto-rows: 80px; padding: 8px 4px; background: rgba(7, 10, 18, .55); border: 1px solid var(--line); border-radius: 22px; }
+  .dock .grid { min-height: 0; grid-auto-rows: 80px; padding: 8px 4px; background: var(--dock-well); border: 1px solid var(--line); border-radius: 22px; }
   .dock .label { display: none; }
   .add-page {
     width: 300px; min-height: 200px; border-radius: 38px; border: 2px dashed var(--line);
@@ -158,14 +294,14 @@
   .tile.dragging { opacity: .3; }
   .tile.dim { opacity: .18; }
   .tile.match .icon { box-shadow: 0 0 0 3px var(--note); }
-  .tile.selected .icon { box-shadow: 0 0 0 2px var(--ground), 0 0 0 4px var(--accent), 0 0 14px 2px rgba(59, 130, 246, .55); }
+  .tile.selected .icon { box-shadow: 0 0 0 2px var(--ground), 0 0 0 4px var(--accent), 0 0 14px 2px rgba(var(--accent-rgb), .55); }
   .icon { width: var(--icon); height: var(--icon); border-radius: var(--radius); overflow: hidden; flex: none; transition: transform .15s ease, box-shadow .15s ease; }
   .icon img { width: 100%; height: 100%; display: block; }
-  .tile:not(.dragging):hover .icon { transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 18px rgba(0, 0, 0, .35); }
+  .tile:not(.dragging):hover .icon { transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 18px var(--icon-hover-shadow); }
   .tile:not(.dragging):active .icon { transform: scale(.95); }
-  .tile:not(.dragging):hover .folder-icon { box-shadow: 0 0 0 1.5px rgba(59, 130, 246, .5); }
-  .placeholder { display: grid; place-items: center; width: 100%; height: 100%; font-weight: 600; font-size: 24px; color: #fff; }
-  .label { max-width: 70px; font-size: 11px; line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+  .tile:not(.dragging):hover .folder-icon { box-shadow: 0 0 0 1.5px rgba(var(--accent-rgb), .5); }
+  .placeholder { display: grid; place-items: center; width: 100%; height: 100%; font-weight: 600; font-size: 24px; color: var(--accent-foreground); }
+  .label { max-width: 70px; font-size: 11px; line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--label-shadow); }
   .tile.hint-before::before, .tile.hint-after::after {
     content: ""; position: absolute; top: 8px; height: var(--icon); width: 3px; border-radius: 2px; background: var(--accent);
   }
@@ -175,14 +311,14 @@
   .usage-badge {
     position: absolute; top: 2px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: var(--radius-full);
     font-size: 9px; font-weight: 600; line-height: 1.4; white-space: nowrap; color: var(--note-soft);
-    background: rgba(7, 10, 18, .9); border: 1px solid rgba(245, 158, 11, .4); pointer-events: none;
+    background: var(--badge-bg); border: 1px solid var(--badge-border); pointer-events: none;
   }
   .note-dot {
     position: absolute; top: 2px; left: 3px; width: 10px; height: 10px; border-radius: 50%;
-    background: var(--note); box-shadow: 0 0 0 2px rgba(10, 11, 16, .85); pointer-events: none;
+    background: var(--note); box-shadow: 0 0 0 2px var(--ring-cutout); pointer-events: none;
   }
 
-  .folder-icon { background: rgba(255, 255, 255, .22); display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 7px; align-content: start; }
+  .folder-icon { background: var(--folder-tile-bg); border: 1px solid var(--folder-tile-border); display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 7px; align-content: start; }
   .folder-icon .mini { width: 100%; aspect-ratio: 1; border-radius: 3px; overflow: hidden; }
   .folder-icon .mini .placeholder { font-size: 7px; }
 
@@ -201,7 +337,7 @@
   .hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
   .notice {
     display: flex; align-items: flex-start; gap: 10px; margin: 0 20px; padding: 11px 14px; border-radius: var(--radius-lg);
-    background: var(--panel-raised); border: 1px solid rgba(59, 130, 246, .35);
+    background: var(--panel-raised); border: 1px solid rgba(var(--accent-rgb), .35);
     border-left: 3px solid var(--accent); color: var(--text); font-size: 13px; line-height: 1.5;
     box-shadow: var(--shadow-sm);
   }
@@ -212,21 +348,21 @@
   }
 
   .tray-card { box-shadow: var(--shadow-md); }
-  .tray-count { text-transform: none; color: var(--text); background: var(--panel-raised); border-radius: var(--radius-full); padding: 2px 9px; font-size: 11px; font-weight: 500; letter-spacing: 0; white-space: nowrap; }
+  .tray-count { text-transform: none; color: var(--text); background: var(--panel-raised); border: 1px solid var(--line); border-radius: var(--radius-full); padding: 2px 9px; font-size: 11px; font-weight: 500; letter-spacing: 0; white-space: nowrap; }
   .tray {
     --icon: 44px; --radius: 10px;
     position: relative;
     display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 70px; align-content: start;
     min-height: 150px; max-height: 42vh; overflow-y: auto; padding: 10px 6px;
     border: 2px dashed var(--line-strong); border-radius: 22px;
-    background: rgba(255, 255, 255, .025); box-shadow: inset 0 3px 14px rgba(0, 0, 0, .55);
+    background: var(--tray-bg); box-shadow: var(--tray-inset-shadow);
     transition: border-color .12s, background .12s;
   }
   .tray .tile { padding-top: 6px; }
-  .tray.target { border-color: var(--accent); background: rgba(59, 130, 246, .08); }
+  .tray.target { border-color: var(--accent); background: rgba(var(--accent-rgb), .08); }
   .tray.target::after {
     content: ""; position: absolute; top: 10px; right: 12px; width: 8px; height: 8px;
-    border-radius: 50%; background: var(--note); box-shadow: 0 0 0 2px rgba(10, 14, 26, .7);
+    border-radius: 50%; background: var(--note); box-shadow: 0 0 0 2px var(--ring-cutout);
   }
   .tray .label { font-size: 10px; max-width: 56px; }
   .tray .usage-badge { display: none; }
@@ -239,7 +375,7 @@
     transition: background .12s;
   }
   .app-library-only .tile { padding-top: 6px; }
-  .app-library-only.target { background: rgba(59, 130, 246, .08); }
+  .app-library-only.target { background: rgba(var(--accent-rgb), .08); }
   .app-library-only .label { font-size: 10px; max-width: 56px; }
   .app-library-only .usage-badge { display: none; }
   .app-library-empty { grid-column: 1 / -1; color: var(--muted); font-size: 12px; padding: 4px 2px; }
@@ -254,7 +390,7 @@
   .most-used .detail { color: var(--muted); font-size: 12px; }
 
   .notes { list-style: none; padding: 0 !important; display: flex; flex-direction: column; gap: 10px; }
-  .notes li { margin: 0; padding: 10px 12px; border-radius: var(--radius-md); background: var(--panel-raised); border-left: 3px solid var(--note); }
+  .notes li { margin: 0; padding: 10px 12px; border-radius: var(--radius-md); background: var(--panel-raised); border: 1px solid var(--line); border-left: 3px solid var(--note); }
   .notes .subjects { font-weight: 600; font-size: 13px; }
   .notes .text { white-space: pre-wrap; margin-top: 3px; }
   .notes .reply { margin-top: 5px; color: var(--muted); font-size: 12px; }
@@ -270,9 +406,9 @@
   .overlay.passthrough { opacity: 0; pointer-events: none; }
   .folder-panel { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: calc(100vw - 32px); }
   .folder-name { background: none; border: 0; text-align: center; font-size: 28px; font-weight: 600; width: 340px; max-width: 100%; border-radius: var(--radius-md); padding: 4px; }
-  .folder-name:not([readonly]):focus { outline: none; background: rgba(255, 255, 255, .08); }
+  .folder-name:not([readonly]):focus { outline: none; background: var(--folder-name-focus-bg); }
   .folder-pages { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
-  .folder-page { width: 280px; padding: 14px 8px; border-radius: 34px; background: rgba(255, 255, 255, .14); }
+  .folder-page { width: 280px; padding: 14px 8px; border-radius: 34px; background: var(--folder-page-bg); border: 1px solid var(--folder-page-border); }
   .folder-page .grid { grid-template-columns: repeat(3, 1fr); min-height: calc(98px * 3 + 4px * 2); }
   .folder-help { color: var(--muted); font-size: 12px; }
   .name-warning { color: var(--note); font-size: 12px; min-height: 1em; }
@@ -297,6 +433,12 @@
   .menu .menu-title { padding: 5px 10px 6px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
   .menu button { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: var(--radius-sm); padding: 7px 10px; cursor: pointer; font-size: 13px; color: var(--text); }
   .menu button:hover, .menu button:focus-visible { background: var(--surface-hover); outline: none; }
+  .menu button:disabled { color: var(--muted); cursor: default; opacity: .5; }
+  .menu button:disabled:hover { background: none; }
+  .menu button.with-icon { display: flex; align-items: center; gap: 9px; }
+  .menu button.with-icon .icon-inline { color: var(--muted); }
+  .menu button.checked .icon-inline.check { visibility: visible; }
+  .menu button .icon-inline.check { visibility: hidden; color: var(--accent); margin-left: auto; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
   .popover {
     position: fixed; z-index: 20; width: 320px; padding: 14px; border-radius: var(--radius-lg);
@@ -347,6 +489,22 @@
   <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="9"></circle><line x1="12" y1="16" x2="12" y2="11.5"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
   </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2.5M12 19.5V22M4.22 4.22l1.77 1.77M18 18l1.78 1.78M2 12h2.5M19.5 12H22M4.22 19.78 6 18M18 6l1.78-1.78"></path>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+  </symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <circle cx="12" cy="12" r="6"></circle>
+  </symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </symbol>
 </svg>
 <header>
   <a class="brand" href="https://github.com/justinleveck/homescreen-organizer" aria-label="Home Screen Organizer">
@@ -371,7 +529,13 @@
     <span>Screen Time</span>
   </button>
   <span class="spacer"></span>
-  <span class="status" id="status"></span>
+  <span class="status" id="status" title="">
+    <svg class="icon-inline status-icon" aria-hidden="true"><use href="#i-info"></use></svg>
+    <span class="status-text" id="status-text"></span>
+  </span>
+  <button type="button" class="icon-btn" id="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">
+    <svg class="icon-inline" aria-hidden="true"><use href="#i-moon"></use></svg>
+  </button>
   <button type="button" class="quiet" id="undo" disabled>
     <svg class="icon-inline" aria-hidden="true"><use href="#i-undo"></use></svg>
     <span>Undo</span>
@@ -379,6 +543,9 @@
   <button type="button" class="quiet" id="reload">
     <svg class="icon-inline" aria-hidden="true"><use href="#i-reload"></use></svg>
     <span>Reload</span>
+  </button>
+  <button type="button" class="icon-btn" id="more-menu-btn" hidden aria-haspopup="menu" aria-expanded="false" aria-label="More actions" title="More actions">
+    <svg class="icon-inline" aria-hidden="true"><use href="#i-more"></use></svg>
   </button>
   <button type="button" class="primary" id="save">Save</button>
   <button type="button" class="quiet" id="restore" hidden>Restore Previous</button>
@@ -389,7 +556,10 @@
 </header>
 <p class="notice" id="notice" hidden></p>
 <main>
-  <section class="screens" id="screens"></section>
+  <section class="screens" id="screens">
+    <div class="dock-bar" id="dock-bar"><div class="dock-bar-inner" id="dock-bar-inner"></div></div>
+    <div class="pages-grid" id="pages-grid"></div>
+  </section>
   <aside id="aside"></aside>
 </main>
 <div class="overlay" id="overlay" hidden></div>
@@ -439,12 +609,17 @@ const state = {
 let dragging = null
 
 const screens = document.getElementById('screens')
+const dockBar = document.getElementById('dock-bar')
+const dockBarInner = document.getElementById('dock-bar-inner')
+const pagesGrid = document.getElementById('pages-grid')
 const aside = document.getElementById('aside')
 const overlay = document.getElementById('overlay')
 const applyOverlay = document.getElementById('apply-overlay')
 const menu = document.getElementById('menu')
 const popover = document.getElementById('popover')
 const statusText = document.getElementById('status')
+const statusTextInner = document.getElementById('status-text')
+const statusIconUse = statusText.querySelector('.status-icon use')
 const saveButton = document.getElementById('save')
 const undoButton = document.getElementById('undo')
 const applyButton = document.getElementById('apply-to-phone')
@@ -453,6 +628,10 @@ const notice = document.getElementById('notice')
 const search = document.querySelector('.search')
 const findOptions = document.getElementById('find-options')
 const usageToggle = document.getElementById('usage-toggle')
+const themeToggle = document.getElementById('theme-toggle')
+const header = document.querySelector('header')
+const reloadButton = document.getElementById('reload')
+const moreMenuBtn = document.getElementById('more-menu-btn')
 
 const isFolder = icon => icon.listType === 'folder'
 const identity = icon => icon.displayIdentifier || icon.bundleIdentifier
@@ -1113,14 +1292,15 @@ function screenFor(page, title, capacity) {
 
 function renderScreens() {
   const layout = shownLayout()
-  screens.replaceChildren()
+  dockBarInner.replaceChildren()
+  pagesGrid.replaceChildren()
   if (!layout.length) return
   const dock = screenFor(layout[0], 'Dock', DOCK_CAPACITY)
   dock.classList.add('dock')
-  screens.append(dock)
-  layout.slice(1).forEach((page, index) => screens.append(screenFor(page, `Page ${index + 1}`, PAGE_CAPACITY)))
+  dockBarInner.append(dock)
+  layout.slice(1).forEach((page, index) => pagesGrid.append(screenFor(page, `Page ${index + 1}`, PAGE_CAPACITY)))
   if (editable()) {
-    screens.append(button('add-page', '+ Add page', () => {
+    pagesGrid.append(button('add-page', '+ Add page', () => {
       state.proposed.push([])
       markUnsaved()
       render()
@@ -1330,6 +1510,7 @@ function openMenu(event, icon) {
   }
   const icons = selectionInOrder()
   const onlyOne = icons.length === 1
+  menu.dataset.source = 'context'
   menu.replaceChildren(element('div', 'menu-title', onlyOne ? icons[0].displayName : `${icons.length} selected`))
   const item = (text, action) => menu.append(button('', text, () => {
     closeMenus()
@@ -1383,21 +1564,189 @@ function showAt(box, x, y) {
 function closeMenus() {
   menu.hidden = true
   popover.hidden = true
+  moreMenuBtn.setAttribute('aria-expanded', 'false')
 }
 
 document.addEventListener('mousedown', event => {
-  if (!menu.hidden && !menu.contains(event.target)) menu.hidden = true
+  if (!menu.hidden && !menu.contains(event.target) && event.target !== moreMenuBtn) closeMenus()
   if (!popover.hidden && !popover.contains(event.target)) popover.hidden = true
 })
 window.addEventListener('scroll', () => { menu.hidden = true }, true)
 
+menu.addEventListener('keydown', event => {
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+  event.preventDefault()
+  const items = [...menu.querySelectorAll('button:not(:disabled)')]
+  if (!items.length) return
+  const currentIndex = items.indexOf(document.activeElement)
+  const nextIndex = event.key === 'ArrowDown'
+    ? (currentIndex + 1) % items.length
+    : (currentIndex - 1 + items.length) % items.length
+  items[nextIndex].focus()
+})
+
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return
-  if (!popover.hidden || !menu.hidden) closeMenus()
+  if (!popover.hidden || !menu.hidden) {
+    const returnFocusToMoreMenu = !menu.hidden && menu.dataset.source === 'more'
+    closeMenus()
+    if (returnFocusToMoreMenu) moreMenuBtn.focus()
+  }
   else if (state.applyPanel && state.applyPanel.stage !== 'working') closeApplyPanel()
   else if (state.openFolder) closeFolder()
   else clearSelection()
 })
+
+// Responsive header (priority+): search shrinks first, then the wordmark hides, then
+// the status collapses to its icon, then actions move into the "more" menu in this
+// order: Restore Previous, Reload, the theme toggle, Undo, Screen Time. Measured with
+// a ResizeObserver rather than fixed breakpoints, so it adapts to any width and to
+// label/font changes, not just window resizes.
+
+const collapseSteps = [
+  { attr: 'data-collapse-search', freedWidth: 60 },
+  { attr: 'data-collapse-wordmark', el: () => document.querySelector('.brand-word') },
+  { attr: 'data-collapse-status', el: () => statusTextInner },
+  { attr: 'data-collapse-restore', el: () => restoreButton, overflow: true },
+  { attr: 'data-collapse-reload', el: () => reloadButton, overflow: true },
+  { attr: 'data-collapse-theme', el: () => themeToggle, overflow: true },
+  { attr: 'data-collapse-undo', el: () => undoButton, overflow: true },
+  { attr: 'data-collapse-screentime', el: () => usageToggle, overflow: true },
+]
+
+function headerGap() {
+  return parseFloat(getComputedStyle(header).columnGap) || 10
+}
+
+function moreButtonWidth() {
+  return (parseFloat(getComputedStyle(header).getPropertyValue('--h-md')) || 33) + headerGap()
+}
+
+function measureCollapseSteps() {
+  for (const step of collapseSteps) header.removeAttribute(step.attr)
+  const gap = headerGap()
+  const naturalWidth = header.scrollWidth
+  const freed = collapseSteps.map(step => {
+    if (step.freedWidth) return step.freedWidth
+    const el = step.el()
+    if (!el || !el.offsetParent) return 0
+    return el.getBoundingClientRect().width + gap
+  })
+  return { naturalWidth, freed }
+}
+
+function bestStage(naturalWidth, freed, availableWidth) {
+  const menuCost = moreButtonWidth()
+  let best = collapseSteps.length
+  for (let stage = 0; stage <= collapseSteps.length; stage++) {
+    const cumulative = freed.slice(0, stage).reduce((sum, width) => sum + width, 0)
+    const showsMenu = collapseSteps.slice(0, stage).some(step => step.overflow)
+    const needed = naturalWidth - cumulative + (showsMenu ? menuCost : 0)
+    if (needed <= availableWidth) { best = stage; break }
+  }
+  return best
+}
+
+function applyStage(stage) {
+  collapseSteps.forEach((step, index) => {
+    if (index < stage) header.setAttribute(step.attr, '')
+    else header.removeAttribute(step.attr)
+  })
+  const anyOverflowed = collapseSteps.slice(0, stage).some(step => step.overflow)
+  moreMenuBtn.hidden = !anyOverflowed
+  if (!anyOverflowed && !menu.hidden && menu.dataset.source === 'more') closeMenus()
+}
+
+function layoutHeader() {
+  const { naturalWidth, freed } = measureCollapseSteps()
+  applyStage(bestStage(naturalWidth, freed, header.clientWidth))
+}
+
+let headerLayoutScheduled = false
+
+function scheduleHeaderLayout() {
+  if (headerLayoutScheduled) return
+  headerLayoutScheduled = true
+  requestAnimationFrame(() => {
+    headerLayoutScheduled = false
+    layoutHeader()
+  })
+}
+
+new ResizeObserver(scheduleHeaderLayout).observe(header)
+
+// The pinned Dock: fixed to the viewport, but width/position tracks .screens (the pages
+// column) so it never overlaps the side panel, and .screens gets bottom padding equal to
+// the bar's own height so the last row of pages can scroll fully clear of it.
+
+function layoutDockBar() {
+  const screensRect = screens.getBoundingClientRect()
+  dockBar.style.left = `${screensRect.left}px`
+  dockBar.style.width = `${screensRect.width}px`
+  const margin = 16
+  const reserve = dockBarInner.children.length ? dockBarInner.offsetHeight + margin * 2 : 0
+  screens.style.paddingBottom = `${reserve}px`
+}
+
+let dockBarLayoutScheduled = false
+
+function scheduleDockBarLayout() {
+  if (dockBarLayoutScheduled) return
+  dockBarLayoutScheduled = true
+  requestAnimationFrame(() => {
+    dockBarLayoutScheduled = false
+    layoutDockBar()
+  })
+}
+
+new ResizeObserver(scheduleDockBarLayout).observe(screens)
+new ResizeObserver(scheduleDockBarLayout).observe(dockBarInner)
+
+function overflowMenuItem(iconName, label, onActivate, options = {}) {
+  const item = button('with-icon', '', () => {
+    closeMenus()
+    onActivate()
+  })
+  item.append(iconUse(iconName), element('span', '', label))
+  if (options.checkable) {
+    item.classList.toggle('checked', !!options.checked)
+    item.append(iconUse('check', 'check'))
+  }
+  item.disabled = !!options.disabled
+  return item
+}
+
+function openMoreMenu() {
+  closeMenus()
+  menu.dataset.source = 'more'
+  const overflowed = new Set(collapseSteps.filter(step => step.overflow && header.hasAttribute(step.attr)).map(step => step.attr))
+  const items = []
+  if (overflowed.has('data-collapse-screentime')) {
+    items.push(overflowMenuItem('clock', 'Screen Time', () => usageToggle.click(), {
+      checkable: true, checked: usageToggle.getAttribute('aria-pressed') === 'true',
+    }))
+  }
+  if (overflowed.has('data-collapse-theme')) {
+    items.push(overflowMenuItem(themeToggle.querySelector('use').getAttribute('href').replace('#i-', ''), themeToggle.title, () => themeToggle.click()))
+  }
+  if (overflowed.has('data-collapse-undo')) {
+    items.push(overflowMenuItem('undo', undoButton.title || 'Undo', () => undoButton.click(), { disabled: undoButton.disabled }))
+  }
+  if (overflowed.has('data-collapse-reload')) {
+    items.push(overflowMenuItem('reload', 'Reload', () => reloadButton.click()))
+  }
+  if (overflowed.has('data-collapse-restore') && !restoreButton.hidden) {
+    items.push(overflowMenuItem('undo', 'Restore Previous', () => restoreButton.click()))
+  }
+  if (!items.length) return
+  menu.replaceChildren(...items)
+  const rect = moreMenuBtn.getBoundingClientRect()
+  showAt(menu, rect.right - 230, rect.bottom + 6)
+  moreMenuBtn.setAttribute('aria-expanded', 'true')
+  items[0].focus()
+}
+
+moreMenuBtn.addEventListener('click', openMoreMenu)
 
 // Validation
 
@@ -1549,13 +1898,23 @@ function markUnsaved() {
   renderStatus()
 }
 
+function applyStatusIcon(iconName) {
+  statusIconUse.setAttribute('href', `#i-${iconName}`)
+}
+
+function setStatusText(text) {
+  statusTextInner.textContent = text
+  statusText.title = text
+}
+
 function renderStatus() {
   saveButton.hidden = !editable()
   saveButton.disabled = !state.unsaved
   const savedAndClean = editable() && !state.unsaved
   statusText.className = state.unsaved ? 'status unsaved' : (savedAndClean ? 'status status-ok' : 'status')
-  if (!editable()) statusText.textContent = 'Read only: the phone as last read'
-  else statusText.textContent = state.unsaved ? 'Unsaved changes' : 'Saved'
+  applyStatusIcon(savedAndClean ? 'check-circle' : (state.unsaved ? 'dot' : 'info'))
+  if (!editable()) setStatusText('Read only: the phone as last read')
+  else setStatusText(state.unsaved ? 'Unsaved changes' : 'Saved')
 }
 
 async function putJson(url, document) {
@@ -1583,7 +1942,7 @@ function trayDocument() {
 
 async function saveLayout() {
   saveButton.disabled = true
-  statusText.textContent = 'Saving…'
+  setStatusText('Saving…')
   try {
     await putJson(PROPOSED_URL, state.proposed)
     await putJson(TRAY_URL, trayDocument())
@@ -1593,7 +1952,8 @@ async function saveLayout() {
     renderApplyButtons()
   } catch (error) {
     statusText.className = 'status unsaved'
-    statusText.textContent = `Not saved: ${error.message}`
+    applyStatusIcon('dot')
+    setStatusText(`Not saved: ${error.message}`)
     saveButton.disabled = false
   }
 }
@@ -1858,6 +2218,8 @@ function render() {
   renderUndoButton()
   renderApplyButtons()
   renderApplyPanel()
+  scheduleHeaderLayout()
+  scheduleDockBarLayout()
 }
 
 document.querySelectorAll('.modes button').forEach(each => {
@@ -1886,6 +2248,30 @@ usageToggle.addEventListener('click', () => {
   state.showUsage = !state.showUsage
   rememberShowUsage()
   render()
+})
+
+const THEME_KEY = 'homescreen.theme'
+
+function rememberTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme)
+  } catch {}
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme)
+  const switchingTo = theme === 'light' ? 'dark' : 'light'
+  themeToggle.setAttribute('aria-label', `Switch to ${switchingTo} mode`)
+  themeToggle.title = `Switch to ${switchingTo} mode`
+  themeToggle.querySelector('use').setAttribute('href', theme === 'light' ? '#i-moon' : '#i-sun')
+}
+
+applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark')
+
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
+  rememberTheme(next)
+  applyTheme(next)
 })
 
 saveButton.addEventListener('click', saveLayout)
