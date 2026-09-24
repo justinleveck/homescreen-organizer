@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.png">
-    <img src="docs/brand/logo-light.png" alt="Home Screen Organizer" width="420">
+    <img src="docs/brand/logo-light.png" alt="Home Screen Organizer" width="360">
   </picture>
 </p>
 
