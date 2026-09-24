@@ -1,4 +1,9 @@
-# homescreen-organizer
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.png">
+    <img src="docs/brand/logo-light.png" alt="Home Screen Organizer" width="420">
+  </picture>
+</p>
 
 View and reorganise an iPhone Home Screen from a Mac over USB.
 

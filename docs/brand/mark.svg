@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Home Screen Organizer">
+  <defs>
+    <linearGradient id="tile" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4FA6FF"/>
+      <stop offset="100%" stop-color="#1F7BFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="10" width="12" height="12" rx="3.2" fill="#1F7BFF" opacity="0.22"/>
+  <rect x="5" y="10" width="12" height="12" rx="3.2" fill="#1F7BFF" opacity="0.45"/>
+  <rect x="9" y="10" width="12" height="12" rx="3.2" fill="#1F7BFF" opacity="0.72"/>
+  <rect x="13.5" y="9" width="13.5" height="13.5" rx="3.6" fill="url(#tile)"/>
+  <circle cx="29.5" cy="15.75" r="2.5" fill="#F7A033"/>
+</svg>

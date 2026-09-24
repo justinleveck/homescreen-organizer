@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Home Screen Organizer logo lockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  .lockup {
+    display: inline-flex; align-items: center; gap: 22px;
+    padding: 28px 32px;
+    font-family: "Montserrat", -apple-system, "Helvetica Neue", sans-serif;
+  }
+  .lockup img { width: 108px; height: 108px; display: block; }
+  .wordmark { display: flex; flex-direction: column; line-height: 1.08; }
+  .wordmark .line1, .wordmark .line2 {
+    font-size: 38px; letter-spacing: .01em; white-space: nowrap;
+  }
+  .wordmark .line1 { font-weight: 500; }
+  .wordmark .line2 { font-weight: 800; }
+  body.light .wordmark { color: #0F1E45; }
+  body.dark .wordmark { color: #F5F6F8; }
+  body.dark .wordmark .line1 { color: #DCDFE5; }
+</style>
+</head>
+<body class="light">
+  <div class="lockup">
+    <img src="icon.png" alt="">
+    <div class="wordmark">
+      <span class="line1">HOME SCREEN</span>
+      <span class="line2">ORGANIZER</span>
+    </div>
+  </div>
+<script>
+  const theme = new URLSearchParams(location.search).get('theme') || 'light'
+  document.body.className = theme
+</script>
+</body>
+</html>
