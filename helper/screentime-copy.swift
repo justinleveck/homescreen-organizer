@@ -8,7 +8,14 @@ let home = FileManager.default.homeDirectoryForCurrentUser
 let biome = home.appending(path: "Library/Biome")
 let appsInFocus = biome.appending(path: "streams/restricted/App.InFocus/remote")
 let devices = biome.appending(path: "sync/sync.db")
-let destination = home.appending(path: "code/homescreen/state/screentime")
+
+// bin/homescreen-usage-install passes this repo's state/screentime folder as the one
+// argument, and bakes it into the launchd job too, so the helper does not need to
+// guess where it was cloned.
+guard let destinationPath = CommandLine.arguments.dropFirst().first else {
+    fatalError("usage: screentime-copy <destination-folder>")
+}
+let destination = URL(fileURLWithPath: destinationPath)
 
 func fail(_ reason: String) -> Never {
     try? FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)

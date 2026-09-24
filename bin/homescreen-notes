@@ -2,5 +2,6 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+python="${HOMESCREEN_PYTHON:-$root/.venv/bin/python}"
 
-exec python3 "$root/lib/notes.py" "$@"
+exec "$python" "$root/lib/notes.py" "$@"

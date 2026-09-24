@@ -47,6 +47,8 @@ def file_tray_contents(layout, tray, app_library_only=()):
 
 
 def _scheme_folders():
+    if not SCHEME.exists():
+        return {}
     scheme = json.loads(SCHEME.read_text())
     return {
         name: {normalised(member) for member in members}

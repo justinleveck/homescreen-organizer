@@ -131,7 +131,12 @@ def main():
     iphone = current_iphone_id(COPIES / "sync.db")
     folder = COPIES / "App.InFocus" / (iphone or "")
     if not iphone or not folder.is_dir():
-        raise SystemExit("No iPhone Screen Time found. Is Share Across Devices on in the iPhone's Screen Time settings?")
+        raise SystemExit(
+            "No iPhone Screen Time found. On the iPhone: Settings > Screen Time > "
+            "Share Across Devices, turn it on. It can take a few hours to sync the first "
+            "time; on the Mac, System Settings > Screen Time should list the iPhone in its "
+            "device picker once it has. Try bin/homescreen-usage again after that."
+        )
 
     changes = list(focus_changes(folder))
     newest = max(change.at for change in changes)

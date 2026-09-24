@@ -21,7 +21,7 @@ cat > "$agent" <<PLIST
 <plist version="1.0">
 <dict>
     <key>Label</key><string>$label</string>
-    <key>ProgramArguments</key><array><string>$helper</string></array>
+    <key>ProgramArguments</key><array><string>$helper</string><string>$root/state/screentime</string></array>
     <key>StandardErrorPath</key><string>$HOME/Library/Logs/homescreen-screentime-copy.log</string>
 </dict>
 </plist>
@@ -31,9 +31,15 @@ launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$agent"
 
 echo "Installed $helper"
+echo "It's registered to copy Screen Time into: $root/state/screentime"
 echo
-echo "Now give it Full Disk Access, once:"
-echo "  System Settings > Privacy & Security > Full Disk Access > +"
-echo "  press Cmd-Shift-G, paste the path below, Open, and switch it on:"
-echo "  $helper"
+echo "Now give it Full Disk Access, once — it needs its own grant, separate from"
+echo "Terminal's or Claude's:"
+echo "  1. System Settings > Privacy & Security > Full Disk Access opens now."
+echo "  2. Click the + button."
+echo "  3. Press Cmd-Shift-G (Go to Folder), paste this path, and press Open:"
+echo "       $helper"
+echo "  4. Switch the toggle on next to it."
+echo
+echo "Then run: bin/homescreen-usage"
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"

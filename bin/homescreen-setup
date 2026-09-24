@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# One-step setup: checks the OS and Python, creates the venv the other bin/ scripts
+# use, creates state/, and checks for a paired iPhone. Safe to run again.
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+
+if [ "$(uname)" != "Darwin" ]; then
+  echo "homescreen only runs on macOS (it talks to the iPhone over USB and reads the" >&2
+  echo "Mac's own Screen Time sync)." >&2
+  exit 1
+fi
+
+python="$(command -v python3 || true)"
+if [ -z "$python" ]; then
+  echo "python3 not found. Install Python 3.11 or later (e.g. from python.org, or" >&2
+  echo "'brew install python3') and run this again." >&2
+  exit 1
+fi
+
+version="$("$python" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')"
+major="${version%%.*}"
+minor="${version##*.}"
+if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 11 ]; }; then
+  echo "python3 is $version; homescreen needs 3.11 or later." >&2
+  exit 1
+fi
+echo "python3 $version: OK"
+
+venv="$root/.venv"
+if [ ! -x "$venv/bin/python" ]; then
+  echo "Creating $venv"
+  "$python" -m venv "$venv"
+fi
+"$venv/bin/python" -m pip install --quiet --upgrade pip
+"$venv/bin/python" -m pip install --quiet pymobiledevice3
+echo "pymobiledevice3: OK ($venv)"
+
+mkdir -p "$root/state"
+
+echo
+if system_profiler SPUSBDataType 2>/dev/null | grep -qi "iPhone"; then
+  echo "iPhone: found over USB."
+else
+  echo "iPhone: not found over USB yet."
+  echo "  Connect it with a cable, unlock it, and tap Trust if it asks — then run"
+  echo "  bin/homescreen-read to check."
+fi
+
+cat <<TXT
+
+Set up. Next steps:
+  bin/homescreen-read       read the phone's layout into state/
+  bin/homescreen-propose    build a first proposal from templates/scheme.starter.json
+  bin/homescreen-serve      open the editor
+
+Screen Time ranking is optional — see the README, or ask Claude Code to
+"organize my home screen" and it will walk you through it.
+TXT

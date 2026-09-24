@@ -1,0 +1,47 @@
+{
+  "about": "Where every app lives when it is not one of the most-used on page 1. bin/homescreen-propose fills page 1 automatically and builds state/proposed.json from this. A name places every app on the phone with that display name; anything named here that isn't installed is reported and ignored. This starter is generic — replace it (or have Claude draft one from state/current.json) with your own apps and folders.",
+  "dock": [
+    "Phone",
+    "Safari",
+    "Messages",
+    "Camera"
+  ],
+  "pages": [
+    {
+      "loose": [
+        "Settings",
+        "App Store",
+        "Mail",
+        "Weather",
+        "Find My",
+        "Contacts",
+        "Clock",
+        "Calculator",
+        "Notes",
+        "Reminders",
+        "Calendar"
+      ],
+      "folders": {
+        "Social": ["Instagram", "X", "Facebook", "TikTok", "Snapchat", "Threads", "LinkedIn", "Reddit"],
+        "Media": ["YouTube", "Spotify", "Apple Music", "Netflix", "Podcasts", "Twitch", "Disney+"],
+        "Photo & Video": ["Photos", "VSCO", "Lightroom", "CapCut"],
+        "Finance": ["Wallet", "Venmo", "PayPal", "Mint", "Cash App"],
+        "Shopping": ["Amazon", "Etsy", "Target", "eBay"]
+      }
+    },
+    {
+      "folders": {
+        "Food & Drink": ["DoorDash", "Uber Eats", "Starbucks", "OpenTable"],
+        "Travel": ["Airbnb", "Expedia", "Delta", "Marriott Bonvoy"],
+        "Maps & Rides": ["Maps", "Google Maps", "Uber", "Lyft", "Waze"],
+        "Health & Fitness": ["Health", "Fitness", "Strava", "MyFitnessPal", "Calm"],
+        "Productivity": ["Notion", "Slack", "Zoom", "Trello", "Todoist"],
+        "Utilities": ["Files", "Measure", "Translate", "Shortcuts", "Magnifier"],
+        "Smart Home": ["Home"],
+        "Security": ["1Password", "Authy"],
+        "Games": ["Chess", "Solitaire", "Wordle", "Game Center"],
+        "Apple": ["TV", "News", "Stocks", "Books", "Voice Memos", "GarageBand", "iMovie", "Freeform", "Tips"]
+      }
+    }
+  ]
+}

@@ -37,10 +37,5 @@ if [ "$(cat "$copies/copied-at" 2>/dev/null || true)" = "$before" ]; then
   exit 1
 fi
 
-venv="$root/.venv"
-if [ ! -x "$venv/bin/python" ]; then
-  uv venv --quiet "$venv"
-  uv pip install --quiet --python "$venv/bin/python" "ccl-segb @ git+https://github.com/cclgroupltd/ccl-segb.git"
-fi
-
-exec "$venv/bin/python" "$root/lib/screentime.py" --days "$days"
+python="${HOMESCREEN_PYTHON:-$root/.venv/bin/python}"
+exec "$python" "$root/lib/screentime.py" --days "$days"
