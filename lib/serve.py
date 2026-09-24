@@ -1,10 +1,12 @@
 """Serve the editor on localhost and let it save the proposed layout, the Tray and notes."""
 
+import errno
 import json
 import os
 import subprocess
 import sys
 import threading
+import urllib.request
 from datetime import datetime
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -13,6 +15,7 @@ from file_tray import file_tray_contents
 from layout import APP_LIBRARY_ONLY, BACKUPS, PROPOSED, ROOT, STATE, TRAY
 
 NOTES = STATE / "notes.json"
+EDITOR_TITLE = b"<title>Home Screen</title>"
 NOTE_STATUSES = {"open", "done"}
 
 # Overridable so tests can stub out the phone-facing step without touching a real iPhone.
@@ -191,6 +194,26 @@ def save_atomically(document, destination):
     os.replace(draft, destination)
 
 
+def editor_url(port):
+    return f"http://localhost:{port}/web/"
+
+
+def is_editor_at(url):
+    try:
+        with urllib.request.urlopen(url, timeout=2) as response:
+            return EDITOR_TITLE in response.read()
+    except OSError:
+        return False
+
+
+def explain_port_in_use(port):
+    url = editor_url(port)
+    if is_editor_at(url):
+        print(f"The editor is already running: {url}")
+        raise SystemExit(0)
+    raise SystemExit(f"Port {port} is taken by another program. Start the editor on another port:\n  bin/homescreen-serve {port + 1}")
+
+
 class EditorHTTPServer(ThreadingHTTPServer):
     # The default backlog of 5 (socketserver.TCPServer.request_queue_size) resets
     # connections under a page load's burst of concurrent icon requests, which the
@@ -200,8 +223,13 @@ class EditorHTTPServer(ThreadingHTTPServer):
 
 def serve(port):
     handler = partial(EditorRequestHandler, directory=str(ROOT))
-    server = EditorHTTPServer(("127.0.0.1", port), handler)
-    print(f"Home Screen editor: http://localhost:{port}/web/", flush=True)
+    try:
+        server = EditorHTTPServer(("127.0.0.1", port), handler)
+    except OSError as error:
+        if error.errno != errno.EADDRINUSE:
+            raise
+        explain_port_in_use(port)
+    print(f"Home Screen editor: {editor_url(port)}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
