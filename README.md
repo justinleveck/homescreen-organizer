@@ -1,28 +1,28 @@
 # homescreen-organizer
 
-View and reorganise an iPhone Home Screen from a Mac, over USB.
+View and reorganise an iPhone Home Screen from a Mac over USB.
 
-The phone's layout is read into `state/current.json` with every icon image. A browser
-editor shows it like the phone does, and lets you drag a proposed layout together in
-`state/proposed.json`. Applying the proposal to the phone is a separate, deliberate step.
-Screen Time can optionally rank your apps by real use, so the most-used ones land on
-page 1 automatically.
+It reads your iPhone layout into local files, displays it in a browser editor, and lets you prepare a new layout before applying it. Applying is always a separate, deliberate action. Optionally, Screen Time data can rank apps so frequently used apps are placed first.
 
 ![The editor: the proposed layout with Screen Time on each app, the Tray, and notes for Claude](docs/editor.png)
 
+## What you can do
+
+- Read the current Home Screen, including icon images.
+- Draft and edit a proposed layout with pages, folders, a dock, a Tray, and an App Library Only list.
+- Generate a proposal from a folder scheme, optionally ranked by Screen Time usage.
+- Ask Claude Code to help organize the draft and resolve notes.
+- Apply or restore a layout over USB, with backups and verification.
+
 ## Requirements
 
-- A Mac running macOS, and an iPhone plugged in over USB, unlocked, and already
-  trusting this Mac.
-- Python 3.11 or later.
-- Optional: [Claude Code](https://claude.com/product/claude-code), to walk you through
-  the whole process — reading the phone, drafting folders from your own apps, and
-  applying the result — instead of running each command by hand.
-- Optional, for Screen Time ranking: Screen Time synced across your devices, and Swift
-  (`swiftc`, part of Xcode Command Line Tools) to build a small local helper. See
-  **Screen Time** below.
+| Needed for | Requirement |
+| --- | --- |
+| Core workflow | A Mac, Python 3.11+, and an iPhone connected by USB, unlocked, and already trusting the Mac. |
+| Guided workflow (optional) | [Claude Code](https://claude.com/product/claude-code). |
+| Screen Time ranking (optional) | Screen Time shared across devices and `swiftc` from Xcode Command Line Tools. |
 
-No npm, no frameworks, no build step. The editor is one HTML file.
+There is no npm install, framework, or build step. The editor is a single HTML file.
 
 ## Quick start
 
@@ -32,240 +32,192 @@ cd homescreen-organizer
 bin/homescreen-setup
 ```
 
-Then either open the folder in Claude Code and say **"organize my home screen"** — it
-reads the phone, helps you draft folders from your own apps, and walks you through the
-rest — or run the commands yourself:
+### Guided workflow
+
+Open the repository in Claude Code and say: **“organize my home screen.”** Claude can read the phone, help create folders based on your installed apps, update the draft, and guide you through applying it.
+
+### Command-line workflow
 
 ```bash
-bin/homescreen-read      # phone -> state/current.json, state/icons/, state/backups/
+bin/homescreen-read      # iPhone -> state/current.json, state/icons/, state/backups/
 bin/homescreen-propose   # state/scheme.json (+ state/usage.json) -> state/proposed.json
 bin/homescreen-serve     # editor at http://localhost:8765/web/ (pass a port to change it)
-bin/homescreen-notes     # print the open notes left in the editor
-bin/homescreen-apply     # state/proposed.json -> phone, after a backup and a prompt
+bin/homescreen-notes     # print open editor notes for Claude
+bin/homescreen-apply     # state/proposed.json -> iPhone, after backup and prompt
 bin/homescreen-apply --restore state/backups/<file>.json
 ```
 
-`bin/homescreen-propose` needs `state/scheme.json` — a folder plan naming where each app
-goes. The first run copies `templates/scheme.starter.json`, a generic starting point, to
-`state/scheme.json` if you don't have one yet. It's worth replacing with folders built
-from your own apps (Claude will do this with you); edit it by hand any time and re-run
-propose.
+`bin/homescreen-propose` needs `state/scheme.json`, which says where apps belong. On first run it copies `templates/scheme.starter.json` to that path. Treat that as a starting point: replace it with a plan based on your own apps, manually or with Claude, then re-run `propose` whenever the plan changes.
 
-The editor can also trigger `homescreen-apply` itself — see **Apply to iPhone** below.
+The editor can also run the apply flow; see [Apply to iPhone](#apply-to-iphone).
 
-## How the editor works
+## Normal workflow
 
-`bin/homescreen-serve`, then open the address it prints. The page needs the server:
-browsers refuse to load the JSON files from `file://`, and the server is also what Save
-writes through.
+1. Connect and unlock the iPhone, then run `bin/homescreen-read`.
+2. Create or refine `state/scheme.json`, then run `bin/homescreen-propose`.
+3. Run `bin/homescreen-serve` and edit **Proposed** in the browser.
+4. Save. Resolve every blocking issue shown by **Check**, and empty the Tray.
+5. Use **Apply to iPhone** or `bin/homescreen-apply`. Confirm only when the iPhone is connected and unlocked.
+6. If necessary, use **Restore Previous** in the editor or `bin/homescreen-apply --restore <backup>`.
 
-- **Current** shows the phone as last read. Read only.
-- **Proposed** is editable. Drop on the edge of an icon to place beside it, on the middle
-  of an icon to make a folder (or add to one), on empty space to add at the end of a page.
-  Double-click a folder to open it and rename it. Drag an app outside the open folder to
-  take it out. You can add and remove empty pages.
-- **Selecting:** click selects an icon or folder. ⌘/Ctrl-click adds or removes one, and
-  Shift-click selects a run within one page or folder. Escape clears the selection.
-  Dragging a selected icon moves the whole selection.
-- **Search** matches app and folder names. Picking a folder scrolls to it and opens it.
-  Picking an app that's in a folder opens that folder with the app highlighted.
-- **Tray**, at the top of the side panel, holds apps while you decide where they go. Drag
-  one app or a selection in, or right-click and choose **Set Aside**. Drag apps back out
-  onto a page, into a folder, or onto an icon to make a folder. **Return All** puts each
-  app back where it came from. The Tray saves with the layout to `state/tray.json`. Apps
-  in the Tray count as placed, but `homescreen-apply` refuses until the Tray is empty.
-  Apps missing from a loaded proposal land in the Tray.
-- **File Tray Contents**, next to Return All, files every Tray app into the folder where
-  it belongs, without asking an agent: `lib/file_tray.py` matches each app to the
-  `state/scheme.json` folder that lists it (names matched with `usage.normalised`), then
-  picks whichever layout folder already holds the most of that scheme folder's other
-  apps — a vote, since you rename and rearrange folders by hand — falling back to a
-  layout folder with the same name. It inserts each app by usage score, before the first
-  app that scores lower, and re-pages the folder in nines. An app on the **App Library
-  Only** list files there instead, no matter what the scheme says — that list always
-  wins. Apps the scheme calls loose, or doesn't mention, have no folder to vote for and
-  go loose just ahead of the first folders with room (page 1, the hand-picked page of
-  loose apps, only when no page of folders has room). The editor applies the result to
-  Proposed and marks it unsaved; a notice reports where each app went. New apps the phone
-  has that the proposal doesn't place go through the same filing on load, automatically,
-  before landing in the Tray as a last resort — Undo reverses that filing as one step.
-- **App Library Only**, below the Tray, holds apps you keep off the Home Screen on
-  purpose. Right-click → **Keep in App Library Only** (or drag an app into its card) puts
-  it there; drag it back out, or right-click → **Put Back on Home Screen**, to return it
-  (to the Tray is fine). It saves with the layout to `state/app-library-only.json` as a
-  list of `{displayIdentifier, displayName}`. These apps count as placed everywhere that
-  matters: not missing, not a Tray stray on load, no Check problem — because `setIconState`
-  cannot hide an app, so the phone may still report one that's on this list, and that's
-  the goal, not an error. `lib/propose.py` never places a listed app, `lib/file_tray.py`
-  routes one straight here instead of voting it into a folder.
-- **Screen Time** (top bar) shows or hides usage. When it's on, an app used this week
-  carries a small badge with its week's screen time (`2h 41m`), or its pickup rank
-  (`#19 pickup`) when it has almost no time. Hovering shows the full numbers and the
-  score, and **Most used this week** in the side panel lists the top 15. The choice is
-  remembered in this browser.
-- **Check** lists everything that would stop the proposal being applied: every app on
-  the phone must be placed exactly once, the dock fits 4 apps and no folders, and a page
-  fits 24. Folders re-page themselves in nines. It also warns, without blocking Apply,
-  when a page has a loose app sitting after a folder ("Page 3: FaceTime, Magnifier, TV
-  sit after the folders.") — a drag can still put an app anywhere.
-- **Save** writes `state/proposed.json`, `state/tray.json` and `state/app-library-only.json`
-  through the server. Drafts save even when Check shows problems, so work in progress is
-  never lost. The server accepts PUT or POST to those paths and `/state/notes.json`, and
-  refuses to write anything else.
-- **Undo**, top bar, or ⌘Z / Ctrl-Z (the browser's own undo runs instead while focus is in
-  a text field), undoes the last move, drag, folder create or rename, Set Aside, Return
-  All, a Keep in App Library Only or Put Back on Home Screen, File Tray Contents, or the
-  automatic filing of new apps on load. Its tooltip names the action ("Undo Set Aside")
-  and it's disabled with nothing to undo. Up to 50 steps, kept as deep copies of the
-  layout, Tray, App Library Only and origins; Reload clears the history. Notes aren't
-  part of it.
+## Editor
 
-Whenever the tool places a loose app on a page itself — filing a new arrival, Put Back on
-Home Screen, Return All when the remembered page is gone — it inserts the app after the
-page's other loose apps and before its first folder, using the next page with room if
-this one is full (`placeLoose` in the editor, `place_loose` in `lib/layout.py`). It never
-reorders a folder past where you dragged it yourself.
+Run `bin/homescreen-serve`, then open the printed address. The server is required: browsers cannot load the JSON from `file://`, and Save writes through this server.
 
-### Apply to iPhone
+### Views and editing
 
-Once the layout is saved, Check has no problems and the Tray is empty, **Apply to
-iPhone** (top bar) is enabled. Clicking it opens an in-page confirmation — no `confirm()`
-dialogs, they don't work reliably here — summarising how many apps change place, folders
-added/removed/renamed, and pages before → after, computed in the browser from
-`state.current` vs `state.proposed`. It warns that widgets and Smart Stacks may not
-survive, and to connect the iPhone by cable and unlock it.
+- **Current** is the last layout read from the iPhone. It is read-only.
+- **Proposed** is the editable draft.
+  - Drop at an icon’s edge to place beside it.
+  - Drop on an icon’s middle to create or add to a folder.
+  - Drop on empty space to add at the end of a page.
+  - Double-click a folder to open and rename it.
+  - Drag an app out of an open folder to remove it.
+  - Add or remove empty pages as needed.
+- **Selection:** click to select; ⌘/Ctrl-click to add or remove items; Shift-click to select a run within one page or folder; Escape to clear. Dragging a selected icon moves the whole selection.
+- **Search** matches app and folder names. Selecting a folder scrolls to and opens it. Selecting an app inside a folder opens that folder and highlights the app.
 
-Confirming calls `POST /apply`, which runs `bin/homescreen-apply --yes` as a subprocess
-(so the server itself stays plain Python) with a timeout of about 90 seconds, and refuses
-if an apply or restore is already running. The result panel shows its output, monospace,
-then reloads state — `homescreen-apply` rewrites `state/current.json` on success.
+### Tray and App Library Only
 
-**Restore Previous** appears next to Apply whenever `state/backups/` holds a backup whose
-name contains `before-apply` (`GET /backups.json` reports the newest one). Its
-confirmation names the backup's time, and confirming calls `POST /restore`, which runs
-`bin/homescreen-apply --restore <that backup> --yes` through the same runner.
+Use these deliberately; both are saved with the layout.
 
-`HOMESCREEN_APPLY_COMMAND` overrides the command `serve.py` runs for both endpoints,
-defaulting to the real `bin/homescreen-apply`. Point it at a stand-in that never touches
-a phone to test the editor's apply and restore flows.
+| Feature | Use it for | Important behavior |
+| --- | --- | --- |
+| **Tray** | Temporarily set apps aside while deciding where they go. | Drag apps or a selection in, or right-click **Set Aside**. Drag them back to a page, folder, or icon; **Return All** restores each app to its origin. The Tray saves to `state/tray.json`. Tray apps count as placed, but Apply is blocked until it is empty. |
+| **App Library Only** | Apps intentionally kept off the Home Screen. | Right-click **Keep in App Library Only** or drag to its card. Drag out or use **Put Back on Home Screen** to return an app (returning it to the Tray is valid). Saved in `state/app-library-only.json` as `{displayIdentifier, displayName}`. These apps count as placed, are not Tray strays, and do not cause Check failures. |
 
-### Notes for Claude
+`setIconState` cannot hide an app. iOS may still report or restore an App Library Only app on the Home Screen; that is expected, not an Apply failure. `lib/propose.py` never places listed apps, and `lib/file_tray.py` routes them directly to App Library Only.
 
-The box at the top of **Notes for Claude**, in the side panel, takes a note about
-whatever is selected, or about the whole layout when nothing is (its `apps` list is then
-empty). Right-click an icon or a selection, in either mode, for the same: **Leave a note…**
-opens a text box (Enter saves, Shift-Enter starts a new line). There are also one-click
-notes: **Move to page 1**, **Put in a folder with these** (for two or more), and
-**Delete this app** — keeping an app off the Home Screen is a real action now, not a
-note; see **App Library Only** above. Notes save straight away
-to `state/notes.json` as `{id, createdAt, apps: [{displayIdentifier, displayName}], text,
-status, reply}`. An icon with an open note shows a small yellow dot, and hovering shows
-the note. **Notes for Claude**, in the side panel, lists open notes with Delete. Done
-notes are collapsed below, each with Claude's reply.
+### File Tray Contents
 
-Claude reads the open notes with `bin/homescreen-notes` and acts on them in
-`state/proposed.json`, never on the phone. For each note it then sets `status` to
-`"done"` with a one-line `reply` saying what it did.
+**File Tray Contents** files every Tray app without involving an agent. It uses `lib/file_tray.py` and `state/scheme.json`:
 
-`state/proposal.md` explains the current draft: what went where and why.
+- Matches app names with `usage.normalised`.
+- Finds the existing layout folder containing the most other apps from that scheme folder; this vote respects folder renames and manual rearranging.
+- Falls back to a layout folder with the same name.
+- Inserts by usage score before the first lower-scoring app, then re-pages folders in groups of nine.
+- Sends an **App Library Only** app there regardless of the scheme; this list wins.
+- Leaves unlisted or deliberately loose apps loose, just before the first folders with room. It uses page 1 only when no page of folders has room.
+
+New phone apps absent from a loaded proposal are automatically put through the same filing logic on load, then land in the Tray only as a last resort. This automatic filing is one Undo step. Filing changes **Proposed**, marks it unsaved, and reports where each app went.
+
+When the tool itself places a loose app—during new-arrival filing, **Put Back on Home Screen**, or **Return All** after the remembered page is gone—it inserts after that page’s loose apps and before its first folder. If full, it uses the next page with room. See `placeLoose` in the editor and `place_loose` in `lib/layout.py`.
+
+### Screen Time display
+
+The top-bar **Screen Time** toggle shows or hides usage and is remembered by the browser.
+
+- An app used this week shows a badge with weekly time (for example, `2h 41m`) or a pickup rank (for example, `#19 pickup`) when it has almost no time.
+- Hover for full numbers and the score.
+- **Most used this week** lists the top 15 in the side panel.
+
+### Check, Save, and Undo
+
+- **Check** blocks Apply when an iPhone app is not placed exactly once, the dock has more than four apps or contains a folder, a page exceeds 24 apps, or the Tray is nonempty. Folders automatically re-page in nines.
+- Check also warns—but does not block Apply—when loose apps appear after a folder on a page. A drag may still place an app anywhere.
+- **Save** writes `state/proposed.json`, `state/tray.json`, and `state/app-library-only.json`. It saves drafts even when Check has problems. The server accepts PUT or POST only for those files and `/state/notes.json`; it refuses all other write paths.
+- **Undo** (top bar, ⌘Z, or Ctrl-Z) reverses the last edit, including moves, drags, folder changes, Tray and App Library Only actions, File Tray Contents, and automatic new-app filing. Browser undo takes precedence in text fields. Up to 50 deep-copy steps cover the layout, Tray, App Library Only list, and origins; Reload clears history. Notes are not included.
+
+## Apply to iPhone
+
+When the draft is saved, Check has no blocking problems, and the Tray is empty, **Apply to iPhone** becomes available.
+
+1. Click it to review a summary of moved apps, folder additions/removals/renames, and page count before → after. The browser calculates this from `state.current` and `state.proposed`.
+2. Read the warning: widgets and Smart Stacks may not survive. Connect the iPhone by cable and unlock it.
+3. Confirm. The editor calls `POST /apply`, which runs `bin/homescreen-apply --yes` with an approximately 90-second timeout. A second apply or restore cannot run while one is in progress.
+4. Review the monospace result panel. On success, the editor reloads state because `homescreen-apply` rewrites `state/current.json`.
+
+**Restore Previous** appears when `state/backups/` contains a backup whose name includes `before-apply`. The editor reports the newest one through `GET /backups.json`, names its time in a confirmation, and calls `POST /restore`, which runs `bin/homescreen-apply --restore <backup> --yes` through the same runner.
+
+To test editor apply and restore flows without touching a phone, set `HOMESCREEN_APPLY_COMMAND` to a stand-in command. It overrides the command used by `serve.py` for both endpoints; by default it is the real `bin/homescreen-apply`.
+
+## Notes for Claude
+
+Use the **Notes for Claude** box in the side panel to leave a note about the selection, or about the whole layout when nothing is selected. Whole-layout notes have an empty `apps` list.
+
+- Right-click an icon or selection in either mode and choose **Leave a note…**. Enter saves; Shift-Enter adds a line.
+- One-click notes: **Move to page 1**, **Put in a folder with these** (two or more apps), and **Delete this app**.
+- “Delete this app” is a note for a human, not an action. To keep an app off the Home Screen, use **App Library Only**.
+- Open notes show a yellow dot on the icon; hover to read them. The side panel lists open notes with Delete, while completed notes are collapsed with Claude’s reply.
+
+Notes save immediately to `state/notes.json` as `{id, createdAt, apps: [{displayIdentifier, displayName}], text, status, reply}`.
+
+Claude reads open notes with `bin/homescreen-notes` and changes only `state/proposed.json`, never the phone. For each completed note, it sets `status` to `"done"` and adds a one-line `reply` describing the change. `state/proposal.md` summarizes the current draft—what went where and why.
 
 ## Screen Time (optional)
 
-Ranking is optional, and everything above works fine without it — Check and Apply never
-require it. When it's on, `bin/homescreen-propose` scores every app (minutes this week
-count most, then pickup rank, then notification rank) and puts the top 24 that aren't in
-the dock on page 1, loose, most used first. The editor's Screen Time toggle then shows
-badges and a "Most used this week" list.
+Screen Time ranking is optional. The editor, Check, and Apply work without it.
 
-It needs a small local helper with **Full Disk Access**, because that's the permission
-macOS requires to read the Screen Time database — granted to the helper binary itself,
-not to Terminal or Claude:
+When usage is available, `bin/homescreen-propose` scores each app by weekly minutes first, then pickup rank, then notification rank. It places the top 24 non-dock apps loose on page 1, most-used first. The editor then exposes the usage badges and list described above.
+
+### Setup
+
+The local helper needs **Full Disk Access** to read the Screen Time database. Grant it to the helper binary itself—not Terminal or Claude.
 
 ```bash
-bin/homescreen-usage-install   # builds the helper, installs it, opens the Full Disk Access pane
-bin/homescreen-usage           # copies this week's Screen Time into state/usage.json
+bin/homescreen-usage-install   # build, install, and open the Full Disk Access pane
+bin/homescreen-usage           # copy this week's Screen Time to state/usage.json
 ```
 
-Requirements: the Mac and iPhone signed into the same Apple ID, with **Settings > Screen
-Time > Share Across Devices** turned on on the iPhone (it can take a few hours to sync
-the first time).
+You also need the Mac and iPhone signed in to the same Apple ID, with **Settings > Screen Time > Share Across Devices** enabled on the iPhone. Initial sync can take a few hours.
 
-Claude Code can walk you through all of this — see the **Screen Time** section of
-`.claude/skills/homescreen/SKILL.md` — including what to click in the Full Disk Access
-pane and what to do if the sync hasn't shown up yet.
+Claude Code can guide setup, including the Full Disk Access pane and sync troubleshooting; see the **Screen Time** section of `.claude/skills/homescreen/SKILL.md`.
 
-Two more signals are optional and filled in by hand, if you want them, in
-`state/usage.json`'s `week.first_used_after_pickup` and `week.notifications` — copied in
-rank order from the iPhone's own Settings > Screen Time > See All App & Website Activity
-> Week.
+If useful, enter these optional rankings manually in `state/usage.json`:
+
+- `week.first_used_after_pickup`
+- `week.notifications`
+
+Copy them in rank order from the iPhone: **Settings > Screen Time > See All App & Website Activity > Week**.
 
 ## Safety model and limits
 
-- **Reading is harmless.** `homescreen-read` only calls SpringBoard's getters
-  (`get_icon_state`, `get_icon_pngdata`) in one USB session. Every read also saves a
-  timestamped copy of the layout to `state/backups/`.
-- **Nothing writes to the phone except `homescreen-apply`** — run directly, or by the
-  editor's Apply to iPhone and Restore Previous, which only ever shell out to it — and it:
-  1. refuses while the editor's Tray still holds apps;
-  2. reads the phone's live layout and refuses unless the layout to apply places every app
-     on the phone right now exactly once (apps installed or removed since the proposal was
-     made are caught here) — an app on the App Library Only list is exempt either way, since
-     the layout never lists it on purpose;
-  3. asks you to type `yes` (skip with `--yes`);
-  4. backs up the live layout to `state/backups/<time>-before-apply.json`;
-  5. sends the layout with `SpringBoardServicesService.set_icon_state(newstate)`, built
-     from the icon records the phone just reported rather than the saved JSON (JSON loses
-     the plist dates SpringBoard sent);
-  6. reads the layout back, saves it to `state/current.json`, and judges the result with
-     App Library Only apps set aside — `setIconState` cannot hide an app, so iOS may put a
-     listed one back on the Home Screen (typically the last page) even though the layout
-     sent never named it; that alone doesn't count as a failed apply. It prints whether the
-     phone otherwise matches, is unchanged, or changed only partly, the `--restore` command
-     to undo, and, if iOS did that, a checklist of which apps to remove by hand.
-  - `--restore <backup>` goes through the same steps with a backup file instead of the
-    proposal.
-- **It may do nothing on current iOS.** Apple has tightened what `setIconState` may
-  change, and SpringBoard may ignore it without an error. SpringBoard has also
-  historically sent no reply to it, so the send has a 10-second deadline. The read-back
-  afterwards is what tells you what happened: if it reports "iOS ignored the layout",
-  nothing changed on the phone. In that case the editor is still useful as a manual
-  checklist — open **Proposed** next to the phone and rearrange by hand, page by page and
-  folder by folder; search highlights where an app belongs.
-- **It never deletes an app.** "Delete this app" in the editor is a note for a human to
-  read, not an action the tool takes — the only way an app leaves the Home Screen is App
-  Library Only, and `setIconState` can't even guarantee that (see above).
-- Other things `setIconState` may not preserve: widgets and Smart Stacks (the layout this
-  reads does not include them), App Library settings, and hidden pages.
+### What is safe to do
 
-## Keeping your data private
+- **Reading is harmless.** `homescreen-read` only calls SpringBoard getters (`get_icon_state`, `get_icon_pngdata`) in one USB session. Each read creates a timestamped layout backup in `state/backups/`.
+- **Nothing writes to the iPhone except `homescreen-apply`.** That includes direct runs and the editor’s Apply and Restore actions, which only shell out to it.
+- **It never deletes an app.** “Delete this app” is only a note. App Library Only is the sole mechanism for requesting an app be left off the Home Screen, and even that cannot be guaranteed by `setIconState`.
 
-`state/` — your phone's layout, icons, usage, notes, and backups — is entirely
-gitignored, so none of it is committed here. `bin/homescreen-setup` creates it.
+### What Apply checks and does
 
-To version your own layout and folder scheme anyway, without putting them in this repo,
-point `state/` at a private repo of your own instead of a plain folder:
+`homescreen-apply` (including `--restore <backup>`) follows this sequence:
+
+1. Refuses if the editor Tray contains apps.
+2. Reads the live layout and refuses unless the layout to apply contains every currently installed app exactly once. Apps installed or removed since the proposal are caught here. App Library Only apps are exempt because the proposal intentionally omits them.
+3. Prompts for `yes`; use `--yes` only when you intend to skip that prompt.
+4. Backs up the live layout as `state/backups/<time>-before-apply.json`.
+5. Sends the layout with `SpringBoardServicesService.set_icon_state(newstate)`, built from the live icon records rather than saved JSON because JSON loses SpringBoard’s plist dates.
+6. Reads back the result, updates `state/current.json`, and evaluates it with App Library Only apps set aside. It reports whether the layout matches, is unchanged, or was only partly applied; it prints a restore command and, if iOS restored App Library Only apps, a checklist for removing them manually.
+
+### iOS limitations
+
+Current iOS versions may ignore `setIconState` without an error. SpringBoard has also historically not replied to this call, so the send uses a 10-second deadline. The read-back is authoritative:
+
+- If it says **“iOS ignored the layout,”** nothing changed on the phone.
+- The editor remains useful as a manual checklist: open **Proposed** beside the phone and arrange it page by page and folder by folder. Search shows where each app belongs.
+- Widgets and Smart Stacks may not be preserved because the read layout does not include them. App Library settings and hidden pages may also change.
+
+## Privacy
+
+`state/` contains your phone layout, icons, usage, notes, and backups. It is gitignored, and `bin/homescreen-setup` creates it locally.
+
+To version your own layout and folder scheme without adding them to this repository, replace `state/` with a link to a private repository:
 
 ```bash
-rm -rf state   # after checking there's nothing in it you still need
+rm -rf state   # only after confirming it contains nothing you still need
 ln -s /path/to/your-private-homescreen-state state
 ```
 
-Everything else in this repo — the scripts, the editor, the starter scheme — stays
-public and shareable.
+The scripts, editor, and starter scheme remain public and shareable.
 
-## Layout
+## Repository layout
 
-```
-bin/          entry points (bash wrappers around lib/)
-lib/          layout.py (rules, validation, diff), phone.py (USB session),
-              usage.py (scores), read.py, propose.py, apply.py, serve.py, notes.py,
-              file_tray.py (File Tray Contents)
-web/          index.html, the editor (one file, no build step)
-helper/       screentime-copy.swift, the Full-Disk-Access helper for Screen Time
-templates/    scheme.starter.json, a generic folder plan to start from
-.claude/      skills/homescreen/SKILL.md, so Claude Code can drive the whole process
-state/        current.json, proposed.json, proposed.generated.json, tray.json,
-              notes.json, proposal.md, usage.json, scheme.json, usage-scores.json,
-              app-library-only.json — all local only, gitignored; icons/, backups/
-              and screentime/ likewise
-```
+| Path | Contents |
+| --- | --- |
+| `bin/` | Command entry points; Bash wrappers around `lib/`. |
+| `lib/` | `layout.py` (rules, validation, diff), `phone.py` (USB session), `usage.py` (scores), `read.py`, `propose.py`, `apply.py`, `serve.py`, `notes.py`, and `file_tray.py` (File Tray Contents). |
+| `web/` | `index.html`, the one-file editor with no build step. |
+| `helper/` | `screentime-copy.swift`, the Full-Disk-Access helper. |
+| `templates/` | `scheme.starter.json`, a generic folder-plan starting point. |
+| `.claude/` | `skills/homescreen/SKILL.md`, enabling Claude Code to guide the workflow. |
+| `state/` | Local-only, gitignored data: `current.json`, `proposed.json`, `proposed.generated.json`, `tray.json`, `notes.json`, `proposal.md`, `usage.json`, `scheme.json`, `usage-scores.json`, `app-library-only.json`, plus `icons/`, `backups/`, and `screentime/`. |
