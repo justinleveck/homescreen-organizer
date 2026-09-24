@@ -15,7 +15,7 @@ from file_tray import file_tray_contents
 from layout import APP_LIBRARY_ONLY, BACKUPS, PROPOSED, ROOT, STATE, TRAY
 
 NOTES = STATE / "notes.json"
-EDITOR_TITLE = b"<title>Home Screen</title>"
+EDITOR_TITLE = b"<title>Home Screen Organizer</title>"
 NOTE_STATUSES = {"open", "done"}
 
 # Overridable so tests can stub out the phone-facing step without touching a real iPhone.
