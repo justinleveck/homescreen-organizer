@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-View and reorganise an iPhone Home Screen from a Mac over USB.
+View and reorganize an iPhone Home Screen from a Mac over USB.
 
 It reads your iPhone layout into local files, displays it in a browser editor, and lets you prepare a new layout before applying it. Applying is always a separate, deliberate action. Optionally, Screen Time data can rank apps so frequently used apps are placed first.
 

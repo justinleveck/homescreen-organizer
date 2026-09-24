@@ -1,6 +1,6 @@
 # homescreen — agent instructions
 
-This repo organises an iPhone Home Screen from a Mac, over USB. When asked to organize,
+This repo organizes an iPhone Home Screen from a Mac, over USB. When asked to organize,
 clean up, or apply a Home Screen layout, use the `.claude/skills/homescreen/SKILL.md`
 skill — it walks through setup, reading the phone, drafting folders with the user,
 Screen Time, the "check my notes" loop, and applying.
