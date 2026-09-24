@@ -1,0 +1,1732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Screen</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ground: #0b0c10;
+    --panel: #16181f;
+    --line: #2a2d38;
+    --text: #f2f2f5;
+    --muted: #9a9cab;
+    --accent: #0a84ff;
+    --danger: #ff453a;
+    --ok: #30d158;
+    --note: #ffd60a;
+    --icon: 58px;
+    --radius: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--ground); color: var(--text); font-size: 14px; }
+  button, input, textarea { font: inherit; color: inherit; }
+
+  header {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    padding: 12px 20px; background: rgba(11, 12, 16, .92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; font-weight: 600; }
+  .modes { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .modes button { border: 0; background: none; padding: 5px 14px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+  .modes button[aria-pressed="true"] { background: #2c2f3a; color: var(--text); }
+  .search { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; width: 220px; }
+  .toggle { background: none; border: 1px solid var(--line); border-radius: 9px; padding: 5px 11px; cursor: pointer; color: var(--muted); font-size: 13px; }
+  .toggle[aria-pressed="true"] { color: var(--text); border-color: #3b3f4d; background: var(--panel); }
+  .spacer { flex: 1; }
+  .status { color: var(--muted); font-size: 13px; }
+  .status.unsaved { color: #ffd60a; }
+  .primary { background: var(--accent); border: 0; border-radius: 9px; padding: 7px 16px; cursor: pointer; font-weight: 600; }
+  .primary:disabled { opacity: .4; cursor: default; }
+  .quiet { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; cursor: pointer; }
+  .quiet:disabled { opacity: .45; cursor: default; }
+
+  main { display: flex; flex-wrap: wrap; gap: 24px; padding: 20px; align-items: flex-start; }
+  .screens { flex: 1 1 640px; display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; min-width: 0; }
+  aside {
+    flex: 0 1 340px; min-width: 280px; display: flex; flex-direction: column; gap: 16px;
+    position: sticky; top: 76px; z-index: 11;
+  }
+  @media (max-width: 900px) {
+    aside { position: static; }
+  }
+
+  .screen {
+    width: 300px; padding: 14px 12px 16px; border-radius: 38px;
+    background: linear-gradient(160deg, #26314f 0%, #1a1f33 45%, #121521 100%);
+    border: 1px solid #2f3547; box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  }
+  .screen-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 10px 10px; font-size: 12px; color: #c7c9d6; }
+  .count.full { color: #ffd60a; }
+  .count.over { color: var(--danger); font-weight: 600; }
+  .screen-head button { background: none; border: 0; color: var(--danger); cursor: pointer; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 84px; min-height: calc(84px * 6); border-radius: 18px; }
+  .grid.target { background: rgba(10, 132, 255, .1); }
+  .dock .grid { min-height: 0; grid-auto-rows: 80px; padding: 8px 4px; background: rgba(255, 255, 255, .13); border-radius: 26px; }
+  .dock .label { display: none; }
+  .add-page {
+    width: 300px; min-height: 200px; border-radius: 38px; border: 2px dashed var(--line);
+    background: none; color: var(--muted); cursor: pointer; font-size: 15px;
+  }
+
+  .tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 6px; user-select: none; cursor: default; }
+  .tile[draggable="true"] { cursor: grab; }
+  .tile.dragging { opacity: .3; }
+  .tile.dim { opacity: .18; }
+  .tile.match .icon { box-shadow: 0 0 0 3px #ffd60a; }
+  .tile.selected .icon { box-shadow: 0 0 0 2px var(--ground), 0 0 0 4px var(--accent); }
+  .icon { width: var(--icon); height: var(--icon); border-radius: var(--radius); overflow: hidden; flex: none; transition: transform .12s; }
+  .icon img { width: 100%; height: 100%; display: block; }
+  .placeholder { display: grid; place-items: center; width: 100%; height: 100%; font-weight: 600; font-size: 24px; color: #fff; }
+  .label { max-width: 70px; font-size: 11px; line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+  .tile.hint-before::before, .tile.hint-after::after {
+    content: ""; position: absolute; top: 8px; height: var(--icon); width: 3px; border-radius: 2px; background: var(--accent);
+  }
+  .tile.hint-before::before { left: -1px; }
+  .tile.hint-after::after { right: -1px; }
+  .tile.hint-merge .icon { transform: scale(1.12); box-shadow: 0 0 0 3px var(--accent); }
+  .usage-badge {
+    position: absolute; top: 1px; right: -2px; padding: 0 5px; border-radius: 8px;
+    font-size: 9px; line-height: 1.4; white-space: nowrap; color: #e6e7ee;
+    background: rgba(10, 11, 16, .72); border: 1px solid rgba(255, 255, 255, .12); pointer-events: none;
+  }
+  .note-dot {
+    position: absolute; top: 2px; left: 3px; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--note); box-shadow: 0 0 0 2px rgba(10, 11, 16, .85); pointer-events: none;
+  }
+
+  .folder-icon { background: rgba(255, 255, 255, .22); display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 7px; align-content: start; }
+  .folder-icon .mini { width: 100%; aspect-ratio: 1; border-radius: 3px; overflow: hidden; }
+  .folder-icon .mini .placeholder { font-size: 7px; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .card h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; row-gap: 6px; font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .card h2 .quiet { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; padding: 5px 12px; white-space: nowrap; }
+  .tray-actions { display: flex; gap: 8px; margin-left: auto; }
+  .card ul { margin: 0; padding-left: 18px; }
+  .card li { margin: 3px 0; }
+  .valid { color: var(--ok); font-weight: 600; }
+  .errors li { color: #ff8a80; }
+  .warnings { margin-top: 6px; }
+  .warnings li { color: #ffd60a; }
+  .waiting { color: #ffd60a; margin-top: 6px; }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
+  .notice { margin: 0 20px; padding: 10px 14px; border-radius: 10px; background: #3a2f10; color: #ffe08a; }
+
+  .tray-card { box-shadow: 0 8px 18px rgba(0, 0, 0, .5); }
+  .tray-count { text-transform: none; color: var(--text); background: #2c2f3a; border-radius: 9px; padding: 2px 8px; font-size: 11px; letter-spacing: 0; white-space: nowrap; }
+  .tray {
+    --icon: 44px; --radius: 10px;
+    display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 70px; align-content: start;
+    min-height: 150px; max-height: 42vh; overflow-y: auto; padding: 10px 6px;
+    border: 2px dashed #3a3f50; border-radius: 22px;
+    background: rgba(255, 255, 255, .025); box-shadow: inset 0 3px 14px rgba(0, 0, 0, .55);
+    transition: border-color .12s, background .12s;
+  }
+  .tray.target { border-color: var(--accent); background: rgba(10, 132, 255, .08); }
+  .tray .label { font-size: 10px; max-width: 56px; }
+  .tray .usage-badge { display: none; }
+  .tray-empty { grid-column: 1 / -1; align-self: center; text-align: center; color: var(--muted); font-size: 13px; margin-top: 44px; }
+
+  .app-library-only {
+    --icon: 44px; --radius: 10px;
+    display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 70px; align-content: start;
+    min-height: 0; max-height: 30vh; overflow-y: auto; padding: 6px 4px; border-radius: 14px;
+    transition: background .12s;
+  }
+  .app-library-only.target { background: rgba(10, 132, 255, .08); }
+  .app-library-only .label { font-size: 10px; max-width: 56px; }
+  .app-library-only .usage-badge { display: none; }
+  .app-library-empty { grid-column: 1 / -1; color: var(--muted); font-size: 12px; padding: 4px 2px; }
+
+  .most-used { list-style: none; padding: 0 !important; }
+  .most-used li { display: flex; align-items: center; gap: 8px; margin: 0; padding: 4px 0; cursor: pointer; }
+  .most-used .rank { width: 16px; color: var(--muted); font-size: 11px; text-align: right; }
+  .mini-icon { width: 22px; height: 22px; border-radius: 6px; overflow: hidden; flex: none; }
+  .mini-icon img { width: 100%; height: 100%; display: block; }
+  .mini-icon .placeholder { font-size: 11px; }
+  .most-used .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .most-used .detail { color: var(--muted); font-size: 12px; }
+
+  .notes { list-style: none; padding: 0 !important; display: flex; flex-direction: column; gap: 10px; }
+  .notes li { margin: 0; padding: 10px 12px; border-radius: 10px; background: #1d2029; border-left: 3px solid var(--note); }
+  .notes .subjects { font-weight: 600; font-size: 13px; }
+  .notes .text { white-space: pre-wrap; margin-top: 3px; }
+  .notes .reply { margin-top: 5px; color: var(--muted); font-size: 12px; }
+  .notes .row { display: flex; align-items: baseline; gap: 8px; }
+  .notes .row .subjects { flex: 1; }
+  .link { background: none; border: 0; padding: 0; color: var(--muted); font-size: 12px; cursor: pointer; }
+  .link:hover { color: var(--danger); }
+  .done-notes { margin-top: 12px; }
+  .done-notes summary { color: var(--muted); font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+  .done-notes .notes li { border-left-color: var(--ok); opacity: .8; }
+
+  .overlay { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(5, 6, 10, .6); backdrop-filter: blur(18px); transition: opacity .15s; }
+  .overlay.passthrough { opacity: 0; pointer-events: none; }
+  .folder-panel { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: calc(100vw - 32px); }
+  .folder-name { background: none; border: 0; text-align: center; font-size: 28px; font-weight: 600; width: 340px; max-width: 100%; border-radius: 10px; padding: 4px; }
+  .folder-name:not([readonly]):focus { outline: none; background: rgba(255, 255, 255, .08); }
+  .folder-pages { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+  .folder-page { width: 280px; padding: 14px 8px; border-radius: 34px; background: rgba(255, 255, 255, .14); }
+  .folder-page .grid { grid-template-columns: repeat(3, 1fr); min-height: calc(84px * 3); }
+  .folder-help { color: var(--muted); font-size: 12px; }
+  .name-warning { color: #ffd60a; font-size: 12px; min-height: 1em; }
+
+  .apply-panel { width: 460px; max-width: calc(100vw - 32px); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; align-items: stretch; }
+  .apply-panel h2 { margin: 0 0 4px; font-size: 17px; }
+  .apply-panel ul { margin: 0; padding-left: 18px; }
+  .apply-panel .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+  .apply-output {
+    max-height: 40vh; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    background: #0e0f14; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+
+  .menu {
+    position: fixed; z-index: 20; min-width: 250px; padding: 5px; border-radius: 10px;
+    background: #22252f; border: 1px solid #353946; box-shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+  .menu .menu-title { padding: 5px 10px 6px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+  .menu button { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  .menu button:hover, .menu button:focus-visible { background: var(--accent); outline: none; }
+  .menu hr { border: 0; border-top: 1px solid #353946; margin: 4px 6px; }
+  .popover {
+    position: fixed; z-index: 20; width: 320px; padding: 12px; border-radius: 12px;
+    background: #22252f; border: 1px solid #353946; box-shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+  .popover .subjects { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .note-composer { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .note-composer .about { font-size: 12px; color: var(--muted); }
+  .note-composer textarea { min-height: 60px; resize: vertical; border-radius: 8px; border: 1px solid #3b3f4d; background: #15171e; padding: 8px; }
+  .note-composer .actions { display: flex; align-items: center; gap: 8px; }
+  .note-composer .actions .hint { margin: 0; flex: 1; }
+  .popover textarea { width: 100%; min-height: 84px; resize: vertical; border-radius: 8px; border: 1px solid #3b3f4d; background: #15171e; padding: 8px; }
+  .popover .actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .popover .actions .hint { margin: 0; flex: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Home Screen</h1>
+  <div class="modes" role="group" aria-label="Layout">
+    <button type="button" data-mode="current">Current</button>
+    <button type="button" data-mode="proposed">Proposed</button>
+  </div>
+  <input class="search" type="search" list="find-options" placeholder="Find an app or folder" aria-label="Find an app or folder">
+  <datalist id="find-options"></datalist>
+  <button type="button" class="toggle" id="usage-toggle" title="Show or hide Screen Time on icons">Screen Time</button>
+  <span class="spacer"></span>
+  <span class="status" id="status"></span>
+  <button type="button" class="quiet" id="undo" disabled>Undo</button>
+  <button type="button" class="quiet" id="reload">Reload</button>
+  <button type="button" class="primary" id="save">Save</button>
+  <button type="button" class="quiet" id="restore" hidden>Restore Previous</button>
+  <button type="button" class="primary" id="apply-to-phone" hidden>Apply to iPhone</button>
+</header>
+<p class="notice" id="notice" hidden></p>
+<main>
+  <section class="screens" id="screens"></section>
+  <aside id="aside"></aside>
+</main>
+<div class="overlay" id="overlay" hidden></div>
+<div class="overlay" id="apply-overlay" hidden></div>
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="popover" id="popover" hidden></div>
+
+<script>
+const PAGE_CAPACITY = 24
+const DOCK_CAPACITY = 4
+const FOLDER_PAGE_CAPACITY = 9
+const FOLDER_NAME_VISIBLE_LENGTH = 12
+const MOST_USED_SHOWN = 15
+const PROPOSED_URL = '../state/proposed.json'
+const TRAY_URL = '../state/tray.json'
+const NOTES_URL = '../state/notes.json'
+const CURRENT_URL = '../state/current.json'
+const USAGE_URL = '../state/usage-scores.json'
+const APP_LIBRARY_ONLY_URL = '../state/app-library-only.json'
+const SHOW_USAGE_KEY = 'homescreen.showScreenTime'
+const FOLDER_OPTION_SUFFIX = ' (folder)'
+const APP_LIBRARY_ONLY_LABEL = 'App Library Only'
+
+const MAX_UNDO_STEPS = 50
+
+const state = {
+  mode: 'proposed',
+  current: [],
+  proposed: [],
+  tray: [],
+  appLibraryOnly: [],
+  origins: new Map(),
+  notes: [],
+  noteDraft: '',
+  usage: {},
+  showUsage: rememberedShowUsage(),
+  unsaved: false,
+  openFolder: null,
+  openFolderJustMade: false,
+  query: '',
+  selected: new Set(),
+  anchor: null,
+  history: [],
+  restore: null,
+  applyPanel: null,
+}
+let dragging = null
+
+const screens = document.getElementById('screens')
+const aside = document.getElementById('aside')
+const overlay = document.getElementById('overlay')
+const applyOverlay = document.getElementById('apply-overlay')
+const menu = document.getElementById('menu')
+const popover = document.getElementById('popover')
+const statusText = document.getElementById('status')
+const saveButton = document.getElementById('save')
+const undoButton = document.getElementById('undo')
+const applyButton = document.getElementById('apply-to-phone')
+const restoreButton = document.getElementById('restore')
+const notice = document.getElementById('notice')
+const search = document.querySelector('.search')
+const findOptions = document.getElementById('find-options')
+const usageToggle = document.getElementById('usage-toggle')
+
+const isFolder = icon => icon.listType === 'folder'
+const identity = icon => icon.displayIdentifier || icon.bundleIdentifier
+const editable = () => state.mode === 'proposed'
+const shownLayout = () => editable() ? state.proposed : state.current
+const shownTray = () => editable() ? state.tray : []
+const plural = (count, one, many) => count === 1 ? `1 ${one}` : `${count} ${many}`
+
+function appsIn(icons) {
+  return icons.flatMap(icon => isFolder(icon) ? icon.iconLists.flatMap(appsIn) : [icon])
+}
+
+function appsInLayout(layout) {
+  return layout.flatMap(appsIn)
+}
+
+function element(tag, className, text) {
+  const node = document.createElement(tag)
+  if (className) node.className = className
+  if (text !== undefined) node.textContent = text
+  return node
+}
+
+function button(className, text, onClick) {
+  const node = element('button', className, text)
+  node.type = 'button'
+  node.addEventListener('click', onClick)
+  return node
+}
+
+// Where things are
+
+function* placesIn(layout, ...flatContainers) {
+  for (const [pageIndex, page] of layout.entries()) {
+    for (const [index, icon] of page.entries()) {
+      yield { icon, container: page, pageIndex, index, folder: null }
+      if (!isFolder(icon)) continue
+      let folderIndex = 0
+      for (const folderPage of icon.iconLists) {
+        for (const [pageSlot, app] of folderPage.entries()) {
+          yield { icon: app, container: folderPage, pageIndex, index: pageSlot, folder: icon, folderIndex: folderIndex++, folderPosition: index }
+        }
+      }
+    }
+  }
+  for (const flatContainer of flatContainers) {
+    for (const [index, app] of flatContainer.entries()) yield { icon: app, container: flatContainer, index, inTray: true }
+  }
+}
+
+const shownAppLibraryOnly = () => editable() ? state.appLibraryOnly : []
+const shownPlaces = () => [...placesIn(shownLayout(), shownTray(), shownAppLibraryOnly())]
+const placeOf = icon => shownPlaces().find(place => place.icon === icon)
+const folderNamed = name => shownLayout().flat().find(icon => isFolder(icon) && icon.displayName === name)
+
+function isFolderPage(container) {
+  return state.proposed.some(page => page.some(icon => isFolder(icon) && icon.iconLists.includes(container)))
+}
+
+// Icon art
+
+function hueFor(text) {
+  let hash = 0
+  for (const character of text) hash = (hash * 31 + character.charCodeAt(0)) % 360
+  return hash
+}
+
+function placeholderFor(app) {
+  const tile = element('div', 'placeholder', (app.displayName || '?').replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase())
+  tile.style.background = `hsl(${hueFor(identity(app))} 42% 42%)`
+  return tile
+}
+
+function artFor(app) {
+  const image = element('img')
+  image.alt = ''
+  image.loading = 'lazy'
+  const source = `../state/icons/${encodeURIComponent(identity(app))}.png`
+  image.src = source
+  image.addEventListener('error', () => {
+    if (image.dataset.retried) image.replaceWith(placeholderFor(app))
+    else {
+      image.dataset.retried = 'yes'
+      image.src = `${source}?retry`
+    }
+  })
+  return image
+}
+
+// Usage
+
+const usageOf = app => state.showUsage && !isFolder(app) ? state.usage[identity(app)] : undefined
+
+function rememberedShowUsage() {
+  try {
+    return localStorage.getItem(SHOW_USAGE_KEY) !== 'hidden'
+  } catch {
+    return true
+  }
+}
+
+function rememberShowUsage() {
+  try {
+    localStorage.setItem(SHOW_USAGE_KEY, state.showUsage ? 'shown' : 'hidden')
+  } catch {}
+}
+
+function duration(seconds) {
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 1) return '<1m'
+  if (minutes < 60) return `${minutes}m`
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
+}
+
+function usageSummary(usage) {
+  if (usage.week_seconds >= 60) return duration(usage.week_seconds)
+  if (usage.pickup_rank) return `#${usage.pickup_rank} pickup`
+  if (usage.week_seconds) return duration(usage.week_seconds)
+  return `#${usage.notification_rank} alerts`
+}
+
+function usageLines(app) {
+  if (!state.showUsage || isFolder(app)) return []
+  const usage = usageOf(app)
+  if (!usage) return ['No Screen Time use this week']
+  return [
+    `This week: ${usage.week_seconds ? duration(usage.week_seconds) : 'none'}`,
+    `First used after pickup: ${usage.pickup_rank ? `#${usage.pickup_rank}` : 'not ranked'}`,
+    `Notifications: ${usage.notification_rank ? `#${usage.notification_rank}` : 'not ranked'}`,
+    `Usage score: ${usage.score}`,
+  ]
+}
+
+function tooltipFor(icon) {
+  const name = icon.displayName || identity(icon)
+  const notes = openNotesOn(icon).map(note => `Note: ${note.text}`)
+  return [name, ...usageLines(icon), ...notes].join('\n')
+}
+
+// Search
+
+function matchesQuery(icon) {
+  if (!state.query) return false
+  const matches = name => (name || '').toLowerCase().includes(state.query)
+  return isFolder(icon) ? matches(icon.displayName) || appsIn([icon]).some(app => matches(app.displayName)) : matches(icon.displayName)
+}
+
+function highlight(tile, icon, insideOpenFolder) {
+  if (!state.query) return
+  if (matchesQuery(icon)) tile.classList.add('match')
+  else if (!insideOpenFolder) tile.classList.add('dim')
+}
+
+function renderFindOptions() {
+  const names = new Set()
+  for (const { icon } of shownPlaces()) {
+    names.add(isFolder(icon) ? `${icon.displayName}${FOLDER_OPTION_SUFFIX}` : icon.displayName)
+  }
+  findOptions.replaceChildren(...[...names].sort().map(name => Object.assign(element('option'), { value: name })))
+}
+
+function findTarget(value) {
+  const wanted = value.trim().toLowerCase()
+  if (!wanted) return null
+  const places = shownPlaces()
+  const folderName = wanted.endsWith(FOLDER_OPTION_SUFFIX) ? wanted.slice(0, -FOLDER_OPTION_SUFFIX.length) : null
+  const byName = (place, name) => (place.icon.displayName || '').toLowerCase() === name
+  return (folderName && places.find(place => isFolder(place.icon) && byName(place, folderName)))
+    || places.find(place => byName(place, wanted))
+    || places.find(place => matchesQuery(place.icon) && !isFolder(place.icon))
+    || places.find(place => matchesQuery(place.icon))
+}
+
+function pick(place) {
+  if (!place) return
+  const { icon, folder } = place
+  state.query = (icon.displayName || '').toLowerCase()
+  search.value = isFolder(icon) ? `${icon.displayName}${FOLDER_OPTION_SUFFIX}` : icon.displayName
+  state.selected = new Set([icon])
+  state.anchor = icon
+  state.openFolder = isFolder(icon) ? icon : folder
+  render()
+  const tileToShow = tileOf(folder || icon, screens) || tileOf(icon)
+  tileToShow?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+
+function tileOf(icon, within = document) {
+  return [...within.querySelectorAll('.tile')].find(tile => tile.icon === icon)
+}
+
+// Selection
+
+function select(icon, event) {
+  if (event.metaKey || event.ctrlKey) {
+    if (state.selected.has(icon)) state.selected.delete(icon)
+    else state.selected.add(icon)
+    state.anchor = icon
+  } else if (event.shiftKey && state.anchor) {
+    selectRangeTo(icon)
+  } else {
+    state.selected = new Set([icon])
+    state.anchor = icon
+  }
+  showSelection()
+}
+
+function selectRangeTo(icon) {
+  const from = placeOf(state.anchor)
+  const to = placeOf(icon)
+  if (!from || !to || from.container !== to.container) {
+    state.selected = new Set([icon])
+    state.anchor = icon
+    return
+  }
+  const [start, end] = [from.index, to.index].sort((one, other) => one - other)
+  state.selected = new Set(to.container.slice(start, end + 1))
+}
+
+function clearSelection() {
+  state.selected = new Set()
+  state.anchor = null
+  showSelection()
+}
+
+function showSelection() {
+  document.querySelectorAll('.tile').forEach(tile => tile.classList.toggle('selected', state.selected.has(tile.icon)))
+  const about = document.getElementById('note-about')
+  if (about) about.textContent = composerAbout()
+}
+
+function selectionInOrder() {
+  return shownPlaces()
+    .filter(place => state.selected.has(place.icon) && !(place.folder && state.selected.has(place.folder)))
+    .map(place => place.icon)
+}
+
+// Tiles
+
+function decorate(tile, icon, insideOpenFolder) {
+  tile.icon = icon
+  tile.title = tooltipFor(icon)
+  if (state.selected.has(icon)) tile.classList.add('selected')
+  if (openNotesOn(icon).length) tile.append(element('span', 'note-dot'))
+  const usage = usageOf(icon)
+  if (usage) tile.append(element('span', 'usage-badge', usageSummary(usage)))
+  highlight(tile, icon, insideOpenFolder)
+  tile.addEventListener('click', event => {
+    event.stopPropagation()
+    select(icon, event)
+  })
+  tile.addEventListener('contextmenu', event => openMenu(event, icon))
+}
+
+function appTile(app, insideOpenFolder) {
+  const tile = element('div', 'tile')
+  const icon = element('div', 'icon')
+  icon.append(artFor(app))
+  tile.append(icon, element('div', 'label', app.displayName))
+  decorate(tile, app, insideOpenFolder)
+  makeDraggable(tile, app)
+  return tile
+}
+
+function folderTile(folder) {
+  const tile = element('div', 'tile')
+  const icon = element('div', 'icon folder-icon')
+  for (const app of appsIn([folder]).slice(0, 9)) {
+    const mini = element('div', 'mini')
+    mini.append(artFor(app))
+    icon.append(mini)
+  }
+  tile.append(icon, element('div', 'label', folder.displayName))
+  decorate(tile, folder)
+  tile.addEventListener('dblclick', () => openFolder(folder))
+  makeDraggable(tile, folder)
+  return tile
+}
+
+function tileFor(icon, container, insideOpenFolder) {
+  const tile = isFolder(icon) ? folderTile(icon) : appTile(icon, insideOpenFolder)
+  acceptDropsOn(tile, icon, container)
+  return tile
+}
+
+// Dragging
+
+function makeDraggable(tile, icon) {
+  if (!editable()) return
+  tile.draggable = true
+  tile.addEventListener('dragstart', event => {
+    closeMenus()
+    const icons = state.selected.has(icon) ? selectionInOrder() : [icon]
+    dragging = { icons }
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', icons.map(each => each.displayName).join(', '))
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.tile').forEach(each => { if (icons.includes(each.icon)) each.classList.add('dragging') })
+    })
+  })
+  tile.addEventListener('dragend', () => {
+    dragging = null
+    render()
+  })
+}
+
+const draggingFolders = () => dragging.icons.some(isFolder)
+
+function accepts(container) {
+  if (!dragging) return false
+  return !(draggingFolders() && (isFolderPage(container) || container === state.tray || container === state.appLibraryOnly))
+}
+
+function canMergeInto(target, container) {
+  return !draggingFolders()
+    && container !== state.proposed[0]
+    && container !== state.tray
+    && container !== state.appLibraryOnly
+    && !isFolderPage(container)
+    && !dragging.icons.includes(target)
+}
+
+function dropLabelFor(container) {
+  if (container === state.tray) return 'Set Aside'
+  if (container === state.appLibraryOnly) return 'Keep in App Library Only'
+  return 'Move'
+}
+
+function dropZone(event, tile, target, container) {
+  const bounds = tile.getBoundingClientRect()
+  const across = (event.clientX - bounds.left) / bounds.width
+  if (across > .25 && across < .75 && canMergeInto(target, container)) return 'merge'
+  return across < .5 ? 'before' : 'after'
+}
+
+function clearHints() {
+  document.querySelectorAll('.hint-before, .hint-after, .hint-merge, .grid.target, .tray.target')
+    .forEach(node => node.classList.remove('hint-before', 'hint-after', 'hint-merge', 'target'))
+}
+
+function acceptDropsOn(tile, target, container) {
+  if (!editable()) return
+  tile.addEventListener('dragover', event => {
+    if (!accepts(container) || dragging.icons.includes(target)) return
+    event.preventDefault()
+    event.stopPropagation()
+    clearHints()
+    tile.classList.add(`hint-${dropZone(event, tile, target, container)}`)
+  })
+  tile.addEventListener('drop', event => {
+    if (!accepts(container) || dragging.icons.includes(target)) return
+    event.preventDefault()
+    event.stopPropagation()
+    const zone = dropZone(event, tile, target, container)
+    const icons = dragging.icons
+    if (zone === 'merge') move(icons, () => mergeWith(target, container, icons), isFolder(target) ? 'Add to folder' : 'Create folder')
+    else move(icons, () => insertNextTo(target, container, zone, icons), dropLabelFor(container))
+  })
+}
+
+function acceptDropsAtEndOf(area, container) {
+  if (!editable()) return
+  area.addEventListener('dragover', event => {
+    if (!accepts(container)) return
+    event.preventDefault()
+    clearHints()
+    area.classList.add('target')
+  })
+  area.addEventListener('drop', event => {
+    if (!accepts(container)) return
+    event.preventDefault()
+    const icons = dragging.icons
+    move(icons, () => container.push(...icons), dropLabelFor(container))
+  })
+}
+
+// Undo
+
+function snapshotFor(fields) {
+  return structuredClone(fields)
+}
+
+function snapshotForUndo() {
+  return snapshotFor({ proposed: state.proposed, tray: state.tray, origins: state.origins, appLibraryOnly: state.appLibraryOnly })
+}
+
+function pushHistory(label) {
+  state.history.push({ label, snapshot: snapshotForUndo() })
+  if (state.history.length > MAX_UNDO_STEPS) state.history.shift()
+}
+
+function undoLastChange() {
+  const step = state.history.pop()
+  if (!step) return
+  state.proposed = step.snapshot.proposed
+  state.tray = step.snapshot.tray
+  state.origins = step.snapshot.origins
+  state.appLibraryOnly = step.snapshot.appLibraryOnly
+  state.openFolder = null
+  clearSelection()
+  closeMenus()
+  markUnsaved()
+  render()
+}
+
+function isTextEntry(target) {
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key.toLowerCase() !== 'z' || event.shiftKey || !(event.metaKey || event.ctrlKey)) return
+  if (isTextEntry(event.target)) return
+  event.preventDefault()
+  undoLastChange()
+})
+
+undoButton.addEventListener('click', undoLastChange)
+
+// Moving
+
+function move(icons, place, label = 'Move') {
+  pushHistory(label)
+  rememberOrigins(icons)
+  for (const icon of icons) {
+    const from = [...placesIn(state.proposed, state.tray, state.appLibraryOnly)].find(each => each.icon === icon)
+    if (from) from.container.splice(from.container.indexOf(icon), 1)
+  }
+  place()
+  forgetOriginsOutsideTray()
+  tidyFolders()
+  const openFolderStillHolds = state.openFolder && appsIn([state.openFolder]).some(app => icons.includes(app))
+  if (!openFolderStillHolds && !state.openFolderJustMade) state.openFolder = null
+  state.openFolderJustMade = false
+  dragging = null
+  markUnsaved()
+  render()
+}
+
+function insertNextTo(target, container, side, icons) {
+  const index = container.indexOf(target) + (side === 'after' ? 1 : 0)
+  container.splice(index, 0, ...icons)
+}
+
+function mergeWith(target, container, icons) {
+  if (isFolder(target)) {
+    icons.forEach(app => addToFolder(target, app))
+    return
+  }
+  const folder = { listType: 'folder', displayName: 'Folder', iconLists: [[target, ...icons]] }
+  container.splice(container.indexOf(target), 1, folder)
+  state.openFolder = folder
+  state.openFolderJustMade = true
+  requestAnimationFrame(() => overlay.querySelector('.folder-name')?.select())
+}
+
+function addToFolder(folder, app) {
+  const pageWithRoom = folder.iconLists.find(page => page.length < FOLDER_PAGE_CAPACITY)
+  if (pageWithRoom) pageWithRoom.push(app)
+  else folder.iconLists.push([app])
+}
+
+function folderPagesOf(apps) {
+  const pages = []
+  for (let start = 0; start < apps.length; start += FOLDER_PAGE_CAPACITY) pages.push(apps.slice(start, start + FOLDER_PAGE_CAPACITY))
+  return pages
+}
+
+function tidyFolders() {
+  for (const page of state.proposed) {
+    for (const folder of page.filter(isFolder)) {
+      const unevenPages = folder.iconLists.some(folderPage => !folderPage.length || folderPage.length > FOLDER_PAGE_CAPACITY)
+      if (unevenPages) folder.iconLists = folderPagesOf(appsIn([folder]))
+      if (!folder.iconLists.length) page.splice(page.indexOf(folder), 1)
+    }
+  }
+}
+
+// Tray
+
+function rememberOrigins(icons) {
+  for (const place of placesIn(state.proposed, state.tray, state.appLibraryOnly)) {
+    if (!icons.includes(place.icon) || place.inTray || isFolder(place.icon)) continue
+    state.origins.set(identity(place.icon), place.folder
+      ? { page: place.pageIndex, index: place.folderIndex, folder: place.folder.displayName, folderPosition: place.folderPosition }
+      : { page: place.pageIndex, index: place.index, folder: null })
+  }
+}
+
+function forgetOriginsOutsideTray() {
+  const held = new Set(state.tray.map(identity))
+  for (const id of [...state.origins.keys()]) if (!held.has(id)) state.origins.delete(id)
+}
+
+function setAside(icons) {
+  const apps = icons.filter(icon => !isFolder(icon) && !state.tray.includes(icon))
+  if (apps.length) move(apps, () => state.tray.push(...apps), 'Set Aside')
+}
+
+function returnAll() {
+  pushHistory('Return All')
+  const returning = state.tray
+    .filter(app => state.origins.has(identity(app)))
+    .sort((one, other) => state.origins.get(identity(one)).index - state.origins.get(identity(other)).index)
+  for (const app of returning) {
+    putBack(app, state.origins.get(identity(app)))
+    state.tray.splice(state.tray.indexOf(app), 1)
+    state.origins.delete(identity(app))
+  }
+  tidyFolders()
+  if (state.tray.length) {
+    showNotice(`${plural(state.tray.length, 'app', 'apps')} in the Tray had no earlier place on this layout; drag them where they belong.`)
+  }
+  markUnsaved()
+  render()
+}
+
+function placeLoose(pages, app) {
+  const withRoom = pages.filter(candidate => candidate.length < PAGE_CAPACITY)
+  const page = withRoom.find(candidate => candidate.some(isFolder)) || withRoom[0] || pages[pages.length - 1]
+  const firstFolderIndex = page.findIndex(isFolder)
+  page.splice(firstFolderIndex === -1 ? page.length : firstFolderIndex, 0, app)
+}
+
+function putBack(app, origin) {
+  const originalPage = state.proposed[origin.page]
+  if (!origin.folder) {
+    if (originalPage) originalPage.splice(Math.min(origin.index, originalPage.length), 0, app)
+    else placeLoose(state.proposed.slice(1), app)
+    return
+  }
+  const page = originalPage || state.proposed[state.proposed.length - 1]
+  let folder = state.proposed.flat().find(icon => isFolder(icon) && icon.displayName === origin.folder)
+  if (!folder) {
+    folder = { listType: 'folder', displayName: origin.folder, iconLists: [] }
+    page.splice(Math.min(origin.folderPosition, page.length), 0, folder)
+  }
+  const apps = appsIn([folder])
+  apps.splice(Math.min(origin.index, apps.length), 0, app)
+  folder.iconLists = folderPagesOf(apps)
+}
+
+async function fileTrayContents() {
+  if (!state.tray.length) return
+  pushHistory('File Tray Contents')
+  try {
+    const response = await postJson('/file-tray', { layout: state.proposed, tray: state.tray, appLibraryOnly: state.appLibraryOnly })
+    state.proposed = response.layout
+    state.tray = response.tray
+    state.appLibraryOnly = response.appLibraryOnly
+    forgetOriginsOutsideTray()
+    markUnsaved()
+    render()
+    showNotice(fileTrayNotice(response.filed, response.unfiled))
+  } catch (error) {
+    state.history.pop()
+    showNotice(`Could not file the Tray: ${error.message}`)
+  }
+}
+
+function groupedByDestination(filed) {
+  const byDestination = new Map()
+  for (const entry of filed) {
+    if (!byDestination.has(entry.folder)) byDestination.set(entry.folder, [])
+    byDestination.get(entry.folder).push(entry.app)
+  }
+  return [...byDestination].map(([destination, apps]) => `${apps.join(', ')} → ${destination}`).join(', ')
+}
+
+function fileTrayNotice(filed, unfiled) {
+  const parts = []
+  if (filed.length) parts.push(`Filed ${plural(filed.length, 'app', 'apps')}: ${groupedByDestination(filed)}`)
+  if (unfiled.length) parts.push(`${plural(unfiled.length, 'app', 'apps')} stayed in the Tray: ${unfiled.join(', ')} (no folder for them; leave a note)`)
+  return parts.length ? parts.join('. ') : 'Nothing in the Tray to file.'
+}
+
+function trayCard() {
+  const section = element('section', 'card tray-card')
+  const title = element('h2', '', 'Tray')
+  title.append(element('span', 'tray-count', plural(state.tray.length, 'app', 'apps')))
+  const empty = button('quiet', 'Return All', returnAll)
+  empty.disabled = !state.tray.some(app => state.origins.has(identity(app)))
+  empty.title = 'Put each app back where it came from'
+  const file = button('quiet', 'File Tray Contents', fileTrayContents)
+  file.disabled = !state.tray.length
+  file.title = 'File every Tray app into the folder where it belongs'
+  const actions = element('div', 'tray-actions')
+  actions.append(empty, file)
+  title.append(actions)
+  const trayArea = element('div', 'tray')
+  for (const app of state.tray) trayArea.append(tileFor(app, state.tray))
+  if (!state.tray.length) trayArea.append(element('div', 'tray-empty', 'Drag apps here to set them aside.'))
+  acceptDropsAtEndOf(trayArea, state.tray)
+  section.append(title, trayArea)
+  return section
+}
+
+// App Library Only
+
+function keepInAppLibraryOnly(icons) {
+  const apps = icons.filter(icon => !isFolder(icon) && !state.appLibraryOnly.includes(icon))
+  if (apps.length) move(apps, () => state.appLibraryOnly.push(...apps), 'Keep in App Library Only')
+}
+
+function putBackOnHomeScreen(icons) {
+  const apps = icons.filter(icon => !isFolder(icon) && state.appLibraryOnly.includes(icon))
+  if (apps.length) move(apps, () => state.tray.push(...apps), 'Put Back on Home Screen')
+}
+
+function appLibraryOnlyCard() {
+  const section = element('section', 'card')
+  const title = element('h2', '', APP_LIBRARY_ONLY_LABEL)
+  title.append(element('span', 'tray-count', plural(state.appLibraryOnly.length, 'app', 'apps')))
+  const area = element('div', 'app-library-only')
+  for (const app of state.appLibraryOnly) area.append(tileFor(app, state.appLibraryOnly))
+  if (!state.appLibraryOnly.length) area.append(element('div', 'app-library-empty', 'Apps you keep off the Home Screen.'))
+  acceptDropsAtEndOf(area, state.appLibraryOnly)
+  section.append(title, area)
+  return section
+}
+
+// Pages
+
+function countLabel(count, capacity) {
+  const label = element('span', 'count', `${count}/${capacity}`)
+  if (count > capacity) label.classList.add('over')
+  else if (count === capacity) label.classList.add('full')
+  return label
+}
+
+function screenFor(page, title, capacity) {
+  const screen = element('div', 'screen')
+  const head = element('div', 'screen-head')
+  const left = element('span', '', `${title} · `)
+  left.append(countLabel(page.length, capacity))
+  head.append(left)
+  if (editable() && page !== state.proposed[0] && !page.length) {
+    head.append(button('', 'Remove page', () => {
+      state.proposed.splice(state.proposed.indexOf(page), 1)
+      markUnsaved()
+      render()
+    }))
+  }
+  const grid = element('div', 'grid')
+  for (const icon of page) grid.append(tileFor(icon, page))
+  acceptDropsAtEndOf(grid, page)
+  screen.append(head, grid)
+  return screen
+}
+
+function renderScreens() {
+  const layout = shownLayout()
+  screens.replaceChildren()
+  if (!layout.length) return
+  const dock = screenFor(layout[0], 'Dock', DOCK_CAPACITY)
+  dock.classList.add('dock')
+  screens.append(dock)
+  layout.slice(1).forEach((page, index) => screens.append(screenFor(page, `Page ${index + 1}`, PAGE_CAPACITY)))
+  if (editable()) {
+    screens.append(button('add-page', '+ Add page', () => {
+      state.proposed.push([])
+      markUnsaved()
+      render()
+    }))
+  }
+}
+
+screens.addEventListener('click', event => { if (!event.target.closest('.tile')) clearSelection() })
+
+// Folder view
+
+function openFolder(folder) {
+  state.openFolder = folder
+  renderFolder()
+}
+
+function closeFolder() {
+  state.openFolder = null
+  render()
+}
+
+function nameWarning(name) {
+  return name.length > FOLDER_NAME_VISIBLE_LENGTH ? `iPhone may cut this name short after ${FOLDER_NAME_VISIBLE_LENGTH} characters.` : ''
+}
+
+function renderFolder() {
+  const stillShown = state.openFolder && shownLayout().flat().includes(state.openFolder)
+  if (!stillShown) state.openFolder = null
+  const folder = state.openFolder
+  overlay.classList.remove('passthrough')
+  overlay.hidden = !folder
+  overlay.replaceChildren()
+  if (!folder) return
+
+  const panel = element('div', 'folder-panel')
+  const name = element('input', 'folder-name')
+  name.value = folder.displayName
+  name.readOnly = !editable()
+  name.setAttribute('aria-label', 'Folder name')
+  const warning = element('div', 'name-warning', nameWarning(folder.displayName))
+  let renamedThisFocus = false
+  name.addEventListener('focus', () => { renamedThisFocus = false })
+  name.addEventListener('input', () => {
+    if (!renamedThisFocus) {
+      pushHistory('Rename folder')
+      renamedThisFocus = true
+    }
+    folder.displayName = name.value
+    warning.textContent = nameWarning(name.value)
+    markUnsaved()
+  })
+  name.addEventListener('keydown', event => { if (event.key === 'Enter') name.blur() })
+
+  const pages = element('div', 'folder-pages')
+  for (const folderPage of folder.iconLists) {
+    const holder = element('div', 'folder-page')
+    const grid = element('div', 'grid')
+    for (const app of folderPage) grid.append(tileFor(app, folderPage, true))
+    acceptDropsAtEndOf(grid, folderPage)
+    holder.append(grid)
+    pages.append(holder)
+  }
+  const help = element('div', 'folder-help', editable()
+    ? `${appsIn([folder]).length} apps · drag an app outside this panel to take it out · Esc to close`
+    : `${appsIn([folder]).length} apps · Esc to close`)
+  panel.append(name, warning, pages, help)
+  overlay.append(panel)
+}
+
+overlay.addEventListener('click', event => { if (event.target === overlay) closeFolder() })
+overlay.addEventListener('dragover', event => {
+  if (dragging && event.target === overlay) overlay.classList.add('passthrough')
+})
+
+// Notes for Claude
+
+const openNotes = () => state.notes.filter(note => note.status === 'open')
+const doneNotes = () => state.notes.filter(note => note.status === 'done')
+
+function subjectOf(icon) {
+  return isFolder(icon)
+    ? { displayIdentifier: null, displayName: icon.displayName, folder: true }
+    : { displayIdentifier: identity(icon), displayName: icon.displayName }
+}
+
+function isAbout(note, icon) {
+  return note.apps.some(subject => isFolder(icon)
+    ? subject.folder && subject.displayName === icon.displayName
+    : subject.displayIdentifier === identity(icon))
+}
+
+function openNotesOn(icon) {
+  return openNotes().filter(note => isAbout(note, icon))
+}
+
+function subjectsLabel(subjects) {
+  if (!subjects.length) return 'Whole layout'
+  return subjects.map(subject => subject.folder ? `${subject.displayName} folder` : subject.displayName).join(', ')
+}
+
+function newNoteId() {
+  return `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+}
+
+async function leaveNote(icons, text) {
+  const trimmed = text.trim()
+  if (!trimmed) return
+  state.notes.push({
+    id: newNoteId(),
+    createdAt: new Date().toISOString(),
+    apps: icons.map(subjectOf),
+    text: trimmed,
+    status: 'open',
+    reply: null,
+  })
+  await saveNotes()
+}
+
+async function deleteNote(note) {
+  state.notes = state.notes.filter(each => each !== note)
+  await saveNotes()
+}
+
+async function saveNotes() {
+  render()
+  try {
+    await putJson(NOTES_URL, state.notes)
+  } catch (error) {
+    showNotice(`Notes not saved: ${error.message}`)
+  }
+}
+
+function noteItem(note) {
+  const item = element('li')
+  const row = element('div', 'row')
+  row.append(element('span', 'subjects', subjectsLabel(note.apps)), button('link', 'Delete', () => deleteNote(note)))
+  item.append(row, element('div', 'text', note.text))
+  if (note.reply) item.append(element('div', 'reply', `Claude: ${note.reply}`))
+  return item
+}
+
+function composerAbout() {
+  const icons = selectionInOrder()
+  return icons.length ? `About ${subjectsLabel(icons.map(subjectOf))}` : 'About the whole layout. Select icons first to make it about them.'
+}
+
+function noteComposer() {
+  const composer = element('div', 'note-composer')
+  const about = element('div', 'about', composerAbout())
+  about.id = 'note-about'
+  const text = element('textarea')
+  text.placeholder = 'Leave a note for Claude…'
+  text.setAttribute('aria-label', 'Note for Claude')
+  text.value = state.noteDraft
+  text.addEventListener('input', () => { state.noteDraft = text.value })
+  const save = () => {
+    const value = state.noteDraft
+    state.noteDraft = ''
+    leaveNote(selectionInOrder(), value)
+  }
+  text.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      save()
+    }
+  })
+  const actions = element('div', 'actions')
+  actions.append(element('p', 'hint', 'Enter saves · Shift-Enter for a new line'), button('primary', 'Add note', save))
+  composer.append(about, text, actions)
+  return composer
+}
+
+function notesCard() {
+  const section = card('Notes for Claude')
+  section.append(noteComposer())
+  const open = openNotes()
+  if (open.length) {
+    const list = element('ul', 'notes')
+    open.forEach(note => list.append(noteItem(note)))
+    section.append(list)
+  }
+  const done = doneNotes()
+  if (done.length) {
+    const details = element('details', 'done-notes')
+    details.append(element('summary', '', `Done (${done.length})`))
+    const list = element('ul', 'notes')
+    done.forEach(note => list.append(noteItem(note)))
+    details.append(list)
+    section.append(details)
+  }
+  return section
+}
+
+// Right-click menu and note popover
+
+function openMenu(event, icon) {
+  event.preventDefault()
+  event.stopPropagation()
+  closeMenus()
+  if (!state.selected.has(icon)) {
+    state.selected = new Set([icon])
+    state.anchor = icon
+    showSelection()
+  }
+  const icons = selectionInOrder()
+  const onlyOne = icons.length === 1
+  menu.replaceChildren(element('div', 'menu-title', onlyOne ? icons[0].displayName : `${icons.length} selected`))
+  const item = (text, action) => menu.append(button('', text, () => {
+    closeMenus()
+    action()
+  }))
+  item('Leave a note…', () => openNotePopover(icons, event.clientX, event.clientY))
+  menu.append(element('hr'))
+  item('Move to page 1', () => leaveNote(icons, 'Move to page 1'))
+  if (icons.length >= 2) item('Put in a folder with these', () => leaveNote(icons, 'Put these in a folder together'))
+  item('Delete this app', () => leaveNote(icons, onlyOne ? 'Delete this app' : 'Delete these apps'))
+  const canArchive = editable() && icons.some(each => !isFolder(each) && !state.appLibraryOnly.includes(each))
+  const canRestore = editable() && icons.some(each => state.appLibraryOnly.includes(each))
+  const canSetAside = editable() && icons.some(each => !isFolder(each) && !state.tray.includes(each) && !state.appLibraryOnly.includes(each))
+  if (canArchive || canRestore || canSetAside) menu.append(element('hr'))
+  if (canArchive) item('Keep in App Library Only', () => keepInAppLibraryOnly(icons))
+  if (canRestore) item('Put Back on Home Screen', () => putBackOnHomeScreen(icons))
+  if (canSetAside) item('Set Aside', () => setAside(icons))
+  showAt(menu, event.clientX, event.clientY)
+  menu.querySelector('button').focus()
+}
+
+function openNotePopover(icons, x, y) {
+  const text = element('textarea')
+  text.placeholder = 'What should change?'
+  text.setAttribute('aria-label', 'Note for Claude')
+  const save = () => {
+    const value = text.value
+    closeMenus()
+    leaveNote(icons, value)
+  }
+  text.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      save()
+    }
+  })
+  const actions = element('div', 'actions')
+  actions.append(element('p', 'hint', 'Enter saves · Shift-Enter for a new line'), button('quiet', 'Cancel', closeMenus), button('primary', 'Save note', save))
+  popover.replaceChildren(element('div', 'subjects', `Note for Claude on ${subjectsLabel(icons.map(subjectOf))}`), text, actions)
+  showAt(popover, x, y)
+  text.focus()
+}
+
+function showAt(box, x, y) {
+  box.hidden = false
+  const { width, height } = box.getBoundingClientRect()
+  box.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`
+  box.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`
+}
+
+function closeMenus() {
+  menu.hidden = true
+  popover.hidden = true
+}
+
+document.addEventListener('mousedown', event => {
+  if (!menu.hidden && !menu.contains(event.target)) menu.hidden = true
+  if (!popover.hidden && !popover.contains(event.target)) popover.hidden = true
+})
+window.addEventListener('scroll', () => { menu.hidden = true }, true)
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return
+  if (!popover.hidden || !menu.hidden) closeMenus()
+  else if (state.applyPanel && state.applyPanel.stage !== 'working') closeApplyPanel()
+  else if (state.openFolder) closeFolder()
+  else clearSelection()
+})
+
+// Validation
+
+function problemsWithProposal() {
+  const problems = []
+  const proposed = state.proposed
+  const currentIds = new Set(appsInLayout(state.current).map(identity))
+  const placements = new Map()
+  for (const app of [...appsInLayout(proposed), ...state.tray]) placements.set(identity(app), (placements.get(identity(app)) || 0) + 1)
+
+  for (const [id, count] of placements) {
+    const name = nameOf(id)
+    if (!currentIds.has(id)) problems.push(`${name} is not on the phone`)
+    if (count > 1) problems.push(`${name} is placed ${count} times`)
+  }
+  const dock = proposed[0] || []
+  if (dock.length > DOCK_CAPACITY) problems.push(`The dock holds ${dock.length}; it fits ${DOCK_CAPACITY}`)
+  if (dock.some(isFolder)) problems.push('The dock holds a folder; keep the dock to apps')
+  proposed.slice(1).forEach((page, index) => {
+    const label = `Page ${index + 1}`
+    if (!page.length) problems.push(`${label} is empty`)
+    if (page.length > PAGE_CAPACITY) problems.push(`${label} holds ${page.length}; it fits ${PAGE_CAPACITY}`)
+    for (const folder of page.filter(isFolder)) {
+      if (!folder.displayName.trim()) problems.push(`${label} has a folder with no name`)
+    }
+  })
+  return problems
+}
+
+function nameOf(id) {
+  const app = appsInLayout(state.current).concat(appsInLayout(state.proposed)).find(icon => identity(icon) === id)
+  return app ? app.displayName : id
+}
+
+function appsNotPlaced() {
+  const placed = new Set([...appsInLayout(state.proposed), ...state.tray, ...state.appLibraryOnly].map(identity))
+  return appsInLayout(state.current).filter(app => !placed.has(identity(app)))
+}
+
+function looseAfterFolderWarnings() {
+  const warnings = []
+  state.proposed.slice(1).forEach((page, index) => {
+    const lastFolderIndex = page.map(isFolder).lastIndexOf(true)
+    if (lastFolderIndex === -1) return
+    const stragglers = page.slice(lastFolderIndex + 1).filter(icon => !isFolder(icon))
+    if (stragglers.length) {
+      const verb = stragglers.length === 1 ? 'sits' : 'sit'
+      warnings.push(`Page ${index + 1}: ${stragglers.map(app => app.displayName).join(', ')} ${verb} after the folders.`)
+    }
+  })
+  return warnings
+}
+
+// Side panel
+
+function card(title) {
+  const section = element('section', 'card')
+  section.append(element('h2', '', title))
+  return section
+}
+
+function summaryCard(layout) {
+  const section = card('Summary')
+  const apps = appsInLayout(layout)
+  const folders = layout.flat().filter(isFolder)
+  const archived = editable() ? state.appLibraryOnly.length : 0
+  const total = apps.length + shownTray().length + archived
+  const list = element('ul')
+  list.append(element('li', '', archived ? `${total} apps and web clips, ${archived} in App Library only` : `${total} apps and web clips`))
+  list.append(element('li', '', `${layout.length - 1} pages, ${folders.length} folders`))
+  section.append(list)
+  return section
+}
+
+function checkCard() {
+  const section = card('Check')
+  const problems = problemsWithProposal()
+  if (problems.length) {
+    const list = element('ul', 'errors')
+    for (const problem of problems) list.append(element('li', '', problem))
+    section.append(list)
+  } else {
+    section.append(element('div', 'valid', 'Every app is placed exactly once.'))
+  }
+  const warnings = looseAfterFolderWarnings()
+  if (warnings.length) {
+    const list = element('ul', 'warnings')
+    for (const warning of warnings) list.append(element('li', '', warning))
+    section.append(list)
+  }
+  if (state.tray.length) {
+    section.append(element('div', 'waiting', `${plural(state.tray.length, 'app', 'apps')} in Tray. Return or place them before applying to the phone.`))
+  }
+  return section
+}
+
+function helpCard() {
+  const section = card('Editing')
+  const list = element('ul')
+  for (const line of [
+    'Click selects; ⌘-click adds; Shift-click selects a run on one page.',
+    'Drag a selected icon to move the whole selection.',
+    'Drop on the edge of an icon to place beside it, on its middle to make or fill a folder.',
+    'Double-click a folder to open it and rename it.',
+    'Write notes to Claude in the side panel or by right-clicking; Set Aside puts apps in the Tray.',
+    'File Tray Contents places every Tray app in its usual folder, or ahead of the first folders with room when it has none.',
+    'Right-click → Keep in App Library Only (or drag into its card) keeps an app off the Home Screen.',
+    '⌘Z / Ctrl-Z undoes the last move, folder change, Set Aside, Return All or filing.',
+    'Apply to iPhone sends the saved layout once Check is clear and the Tray is empty.',
+  ]) list.append(element('li', 'hint', line))
+  section.append(list)
+  return section
+}
+
+function mostUsedCard() {
+  const section = card('Most used this week')
+  const apps = appsInLayout(state.current)
+    .filter(usageOf)
+    .sort((one, other) => usageOf(other).score - usageOf(one).score)
+    .slice(0, MOST_USED_SHOWN)
+  const list = element('ol', 'most-used')
+  apps.forEach((app, index) => {
+    const row = element('li')
+    row.title = tooltipFor(app)
+    const icon = element('span', 'mini-icon')
+    icon.append(artFor(app))
+    row.append(element('span', 'rank', String(index + 1)), icon, element('span', 'name', app.displayName), element('span', 'detail', usageSummary(usageOf(app))))
+    row.addEventListener('click', () => pick(shownPlaces().find(place => identity(place.icon) === identity(app) && !isFolder(place.icon))))
+    list.append(row)
+  })
+  section.append(list, element('p', 'hint', 'From Screen Time. Click one to find it on the screens.'))
+  return section
+}
+
+function renderAside() {
+  aside.replaceChildren()
+  if (editable()) aside.append(trayCard())
+  if (editable()) aside.append(appLibraryOnlyCard())
+  aside.append(notesCard())
+  if (editable()) aside.append(checkCard())
+  if (state.showUsage && Object.keys(state.usage).length) aside.append(mostUsedCard())
+  aside.append(summaryCard(shownLayout()), helpCard())
+}
+
+// Saving
+
+function markUnsaved() {
+  state.unsaved = true
+  renderStatus()
+}
+
+function renderStatus() {
+  saveButton.hidden = !editable()
+  saveButton.disabled = !state.unsaved
+  statusText.className = state.unsaved ? 'status unsaved' : 'status'
+  if (!editable()) statusText.textContent = 'Read only: the phone as last read'
+  else statusText.textContent = state.unsaved ? 'Unsaved changes' : 'Saved'
+}
+
+async function putJson(url, document) {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(document, null, 2),
+  })
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+}
+
+async function postJson(url, document) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(document),
+  })
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+  return response.json()
+}
+
+function trayDocument() {
+  return state.tray.map(app => ({ app, origin: state.origins.get(identity(app)) || null }))
+}
+
+async function saveLayout() {
+  saveButton.disabled = true
+  statusText.textContent = 'Saving…'
+  try {
+    await putJson(PROPOSED_URL, state.proposed)
+    await putJson(TRAY_URL, trayDocument())
+    await putJson(APP_LIBRARY_ONLY_URL, state.appLibraryOnly)
+    state.unsaved = false
+    renderStatus()
+    renderApplyButtons()
+  } catch (error) {
+    statusText.className = 'status unsaved'
+    statusText.textContent = `Not saved: ${error.message}`
+    saveButton.disabled = false
+  }
+}
+
+// Apply to iPhone
+
+function placeSignature(layout) {
+  const signature = new Map()
+  for (const place of placesIn(layout, [])) {
+    if (isFolder(place.icon)) continue
+    signature.set(identity(place.icon), place.folder ? `folder:${place.folder.displayName}` : `page:${place.pageIndex}`)
+  }
+  return signature
+}
+
+function appsChangingPlace() {
+  const before = placeSignature(state.current)
+  const after = placeSignature(state.proposed)
+  let changed = 0
+  for (const [id, signature] of after) if (before.has(id) && before.get(id) !== signature) changed++
+  return changed
+}
+
+function folderChanges() {
+  const currentFolders = state.current.flat().filter(isFolder)
+  const proposedFolders = state.proposed.flat().filter(isFolder)
+  const unmatchedCurrent = new Set(currentFolders)
+  const unmatchedProposed = new Set(proposedFolders)
+  for (const name of new Set(currentFolders.map(folder => folder.displayName))) {
+    const fromCurrent = [...unmatchedCurrent].find(folder => folder.displayName === name)
+    const fromProposed = [...unmatchedProposed].find(folder => folder.displayName === name)
+    if (fromCurrent && fromProposed) {
+      unmatchedCurrent.delete(fromCurrent)
+      unmatchedProposed.delete(fromProposed)
+    }
+  }
+  let renamed = 0
+  for (const proposedFolder of [...unmatchedProposed]) {
+    const proposedIds = new Set(appsIn([proposedFolder]).map(identity))
+    const match = [...unmatchedCurrent].find(folder => appsIn([folder]).some(app => proposedIds.has(identity(app))))
+    if (match) {
+      renamed++
+      unmatchedCurrent.delete(match)
+      unmatchedProposed.delete(proposedFolder)
+    }
+  }
+  return { added: unmatchedProposed.size, removed: unmatchedCurrent.size, renamed }
+}
+
+function applySummary() {
+  return {
+    changedPlace: appsChangingPlace(),
+    folders: folderChanges(),
+    pagesBefore: state.current.length - 1,
+    pagesAfter: state.proposed.length - 1,
+  }
+}
+
+function applyDisabledReason() {
+  if (!editable()) return 'Switch to Proposed to apply.'
+  if (state.unsaved) return 'Save the layout first.'
+  if (problemsWithProposal().length) return 'Fix the problems in Check first.'
+  if (state.tray.length) return 'Empty the Tray first.'
+  return null
+}
+
+async function refreshRestoreAvailability() {
+  try {
+    const info = await fetchJson('/backups.json')
+    state.restore = (info && info.restore) || null
+  } catch {
+    state.restore = null
+  }
+}
+
+function openApplyPanel(kind) {
+  state.applyPanel = { stage: 'confirm', kind }
+  render()
+}
+
+function closeApplyPanel() {
+  state.applyPanel = null
+  render()
+}
+
+async function confirmApplyPanel() {
+  const kind = state.applyPanel.kind
+  state.applyPanel = { stage: 'working', kind }
+  render()
+  try {
+    const endpoint = kind === 'restore' ? '/restore' : '/apply'
+    const result = await postJson(endpoint, {})
+    state.applyPanel = { stage: 'result', kind, ok: result.ok, output: result.output }
+    render()
+    if (result.ok) await load()
+  } catch (error) {
+    state.applyPanel = { stage: 'result', kind, ok: false, output: error.message }
+    render()
+  }
+}
+
+function applyPanelTitle(panel) {
+  if (panel.stage === 'working') return panel.kind === 'restore' ? 'Restoring…' : 'Applying…'
+  if (panel.stage === 'result') return panel.ok ? 'Done' : 'Something went wrong'
+  return panel.kind === 'restore' ? 'Restore Previous?' : 'Apply to iPhone?'
+}
+
+function confirmPanelBody(panel) {
+  const list = element('ul')
+  if (panel.kind === 'restore') {
+    const when = state.restore ? new Date(state.restore.time).toLocaleString() : 'the last backup'
+    list.append(element('li', '', `Puts the phone back to the backup from ${when}.`))
+  } else {
+    const summary = applySummary()
+    list.append(element('li', '', `${plural(summary.changedPlace, 'app changes', 'apps change')} place.`))
+    const folderBits = []
+    if (summary.folders.added) folderBits.push(`${summary.folders.added} added`)
+    if (summary.folders.removed) folderBits.push(`${summary.folders.removed} removed`)
+    if (summary.folders.renamed) folderBits.push(`${summary.folders.renamed} renamed`)
+    list.append(element('li', '', folderBits.length ? `Folders: ${folderBits.join(', ')}.` : 'No folders added, removed or renamed.'))
+    list.append(element('li', '', `Pages: ${summary.pagesBefore} → ${summary.pagesAfter}.`))
+  }
+  return [
+    list,
+    element('p', 'hint', 'Widgets and Smart Stacks may not survive.'),
+    element('p', 'hint', 'Connect the iPhone by cable and unlock it.'),
+  ]
+}
+
+function applyPanelContent(panel) {
+  const box = element('div', 'folder-panel apply-panel')
+  box.append(element('h2', '', applyPanelTitle(panel)))
+  const actions = element('div', 'actions')
+  if (panel.stage === 'confirm') {
+    box.append(...confirmPanelBody(panel))
+    actions.append(button('quiet', 'Cancel', closeApplyPanel), button('primary', panel.kind === 'restore' ? 'Restore Previous' : 'Apply to iPhone', confirmApplyPanel))
+  } else if (panel.stage === 'working') {
+    box.append(element('p', 'hint', 'This can take up to a minute and a half.'))
+  } else {
+    box.append(element('pre', 'apply-output', panel.output || '(no output)'))
+    actions.append(button('primary', 'Close', closeApplyPanel))
+  }
+  box.append(actions)
+  return box
+}
+
+function renderApplyPanel() {
+  applyOverlay.hidden = !state.applyPanel
+  applyOverlay.replaceChildren()
+  if (state.applyPanel) applyOverlay.append(applyPanelContent(state.applyPanel))
+}
+
+applyOverlay.addEventListener('click', event => {
+  if (event.target === applyOverlay && state.applyPanel?.stage !== 'working') closeApplyPanel()
+})
+
+function renderApplyButtons() {
+  const reason = applyDisabledReason()
+  applyButton.hidden = !editable()
+  applyButton.disabled = !!reason
+  applyButton.title = reason || 'Review and apply this layout to the iPhone'
+  restoreButton.hidden = !editable() || !state.restore
+  if (state.restore) restoreButton.title = `Restore the backup from ${new Date(state.restore.time).toLocaleString()}`
+}
+
+applyButton.addEventListener('click', () => openApplyPanel('apply'))
+restoreButton.addEventListener('click', () => openApplyPanel('restore'))
+
+// Loading
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: 'no-store' })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`${url}: ${response.status}`)
+  return response.json()
+}
+
+async function fileNewArrivals(strays) {
+  try {
+    const response = await postJson('/file-tray', { layout: state.proposed, tray: strays, appLibraryOnly: state.appLibraryOnly })
+    state.proposed = response.layout
+    state.tray.push(...response.tray)
+    state.appLibraryOnly = response.appLibraryOnly
+    return response
+  } catch (error) {
+    state.tray.push(...strays)
+    return { filed: [], unfiled: strays.map(app => app.displayName || identity(app)) }
+  }
+}
+
+function newArrivalsNotice(filed, unfiled) {
+  const parts = []
+  if (filed.length) parts.push(`${plural(filed.length, 'new app', 'new apps')} filed: ${groupedByDestination(filed)}`)
+  if (unfiled.length) parts.push(`${unfiled.length} in the Tray: ${unfiled.join(', ')} (no folder for ${unfiled.length === 1 ? 'it' : 'them'})`)
+  return parts.join('. ')
+}
+
+async function load() {
+  notice.hidden = true
+  try {
+    state.current = await fetchJson(CURRENT_URL) || []
+    state.usage = await fetchJson(USAGE_URL) || {}
+    state.notes = await fetchJson(NOTES_URL) || []
+    state.appLibraryOnly = await fetchJson(APP_LIBRARY_ONLY_URL) || []
+    const proposed = await fetchJson(PROPOSED_URL)
+    const tray = await fetchJson(TRAY_URL) || []
+    state.proposed = proposed || structuredClone(state.current)
+    state.tray = tray.map(entry => entry.app)
+    state.origins = new Map(tray.filter(entry => entry.origin).map(entry => [identity(entry.app), entry.origin]))
+
+    const strays = appsNotPlaced()
+    state.unsaved = !proposed || strays.length > 0
+    if (!proposed) {
+      state.tray.push(...strays)
+      state.history = []
+      showNotice('No proposal saved yet, so this one starts as a copy of the current layout.')
+    } else if (strays.length) {
+      const undoToAllInTray = snapshotFor({ proposed: state.proposed, tray: [...state.tray, ...strays], origins: state.origins, appLibraryOnly: state.appLibraryOnly })
+      const filing = await fileNewArrivals(strays)
+      state.history = [{ label: 'File new apps', snapshot: undoToAllInTray }]
+      showNotice(newArrivalsNotice(filing.filed, filing.unfiled))
+    } else {
+      state.history = []
+    }
+  } catch (error) {
+    showNotice('Could not load the layout. Run bin/homescreen-serve and open the address it prints.')
+    state.history = []
+  }
+  await refreshRestoreAvailability()
+  state.openFolder = null
+  state.selected = new Set()
+  state.anchor = null
+  closeMenus()
+  render()
+}
+
+function showNotice(text) {
+  notice.textContent = text
+  notice.hidden = false
+}
+
+// Wiring
+
+function renderUndoButton() {
+  const last = state.history[state.history.length - 1]
+  undoButton.hidden = !editable()
+  undoButton.disabled = !last
+  undoButton.title = last ? `Undo ${last.label}` : 'Nothing to undo'
+}
+
+function render() {
+  clearHints()
+  document.querySelectorAll('.modes button').forEach(each => {
+    each.setAttribute('aria-pressed', String(each.dataset.mode === state.mode))
+  })
+  usageToggle.setAttribute('aria-pressed', String(state.showUsage))
+  renderScreens()
+  renderAside()
+  renderFolder()
+  renderStatus()
+  renderFindOptions()
+  renderUndoButton()
+  renderApplyButtons()
+  renderApplyPanel()
+}
+
+document.querySelectorAll('.modes button').forEach(each => {
+  each.addEventListener('click', () => {
+    state.mode = each.dataset.mode
+    closeMenus()
+    state.openFolder = null
+    state.selected = new Set()
+    state.anchor = null
+    render()
+  })
+})
+
+search.addEventListener('input', event => {
+  state.query = search.value.trim().toLowerCase().replace(FOLDER_OPTION_SUFFIX, '')
+  const pickedFromList = event.inputType === 'insertReplacementText' || event.inputType === undefined
+  if (pickedFromList && state.query) pick(findTarget(search.value))
+  else render()
+})
+
+search.addEventListener('keydown', event => {
+  if (event.key === 'Enter') pick(findTarget(search.value))
+})
+
+usageToggle.addEventListener('click', () => {
+  state.showUsage = !state.showUsage
+  rememberShowUsage()
+  render()
+})
+
+saveButton.addEventListener('click', saveLayout)
+
+document.getElementById('reload').addEventListener('click', () => {
+  if (state.unsaved && !window.confirm('Discard unsaved changes?')) return
+  load()
+})
+
+window.addEventListener('beforeunload', event => {
+  if (state.unsaved) event.preventDefault()
+})
+
+load()
+</script>
+</body>
+</html>

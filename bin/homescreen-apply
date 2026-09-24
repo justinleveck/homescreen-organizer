@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+python="${HOMESCREEN_PYTHON:-$HOME/.local/pipx/venvs/pymobiledevice3/bin/python}"
+
+exec "$python" "$root/lib/apply.py" "$@"

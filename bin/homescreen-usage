@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Refreshes state/usage.json from the iPhone's Screen Time as synced to this Mac.
+# launchd runs the copy helper, the one program with Full Disk Access; everything
+# after that reads the copies with no special access.
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+label="local.homescreen.screentime-copy"
+copies="$root/state/screentime"
+days="${1:-7}"
+
+if ! launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then
+  echo "The copy helper is not installed. Run bin/homescreen-usage-install first." >&2
+  exit 1
+fi
+
+mkdir -p "$copies"
+before="$(cat "$copies/copied-at" 2>/dev/null || true)"
+rm -f "$copies/copy-failed"
+launchctl kickstart -k "gui/$(id -u)/$label"
+
+for _ in $(seq 1 60); do
+  if [ -f "$copies/copy-failed" ]; then
+    echo "The copy helper could not read Screen Time: $(cat "$copies/copy-failed")" >&2
+    echo "System Settings > Privacy & Security > Full Disk Access, and switch on:" >&2
+    echo "  $HOME/Library/Application Support/homescreen/screentime-copy" >&2
+    exit 1
+  fi
+  now="$(cat "$copies/copied-at" 2>/dev/null || true)"
+  if [ -n "$now" ] && [ "$now" != "$before" ]; then break; fi
+  sleep 0.5
+done
+
+if [ "$(cat "$copies/copied-at" 2>/dev/null || true)" = "$before" ]; then
+  echo "The copy helper did not finish; see ~/Library/Logs/homescreen-screentime-copy.log" >&2
+  exit 1
+fi
+
+venv="$root/.venv"
+if [ ! -x "$venv/bin/python" ]; then
+  uv venv --quiet "$venv"
+  uv pip install --quiet --python "$venv/bin/python" "ccl-segb @ git+https://github.com/cclgroupltd/ccl-segb.git"
+fi
+
+exec "$venv/bin/python" "$root/lib/screentime.py" --days "$days"

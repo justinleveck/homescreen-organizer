@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+port="${1:-8765}"
+
+exec python3 "$root/lib/serve.py" "$port"

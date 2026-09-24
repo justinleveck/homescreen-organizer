@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Builds the one small program that is given Full Disk Access, installs it where it
+# will not move, and registers it with launchd. Started by launchd, it answers for
+# itself when macOS checks permissions, so its access does not depend on who asks
+# for a refresh. Rebuilding changes its fingerprint, so macOS then asks again.
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+label="local.homescreen.screentime-copy"
+install_dir="$HOME/Library/Application Support/homescreen"
+helper="$install_dir/screentime-copy"
+agent="$HOME/Library/LaunchAgents/$label.plist"
+
+mkdir -p "$install_dir" "$HOME/Library/LaunchAgents"
+swiftc -O -o "$helper" "$root/helper/screentime-copy.swift"
+
+cat > "$agent" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>$label</string>
+    <key>ProgramArguments</key><array><string>$helper</string></array>
+    <key>StandardErrorPath</key><string>$HOME/Library/Logs/homescreen-screentime-copy.log</string>
+</dict>
+</plist>
+PLIST
+
+launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$agent"
+
+echo "Installed $helper"
+echo
+echo "Now give it Full Disk Access, once:"
+echo "  System Settings > Privacy & Security > Full Disk Access > +"
+echo "  press Cmd-Shift-G, paste the path below, Open, and switch it on:"
+echo "  $helper"
+open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
