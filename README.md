@@ -238,8 +238,7 @@ rank order from the iPhone's own Settings > Screen Time > See All App & Website 
 ## Keeping your data private
 
 `state/` — your phone's layout, icons, usage, notes, and backups — is entirely
-gitignored (only `state/.gitkeep` is tracked), so none of it is committed here by
-default.
+gitignored, so none of it is committed here. `bin/homescreen-setup` creates it.
 
 To version your own layout and folder scheme anyway, without putting them in this repo,
 point `state/` at a private repo of your own instead of a plain folder:
