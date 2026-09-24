@@ -1,4 +1,4 @@
-# homescreen
+# homescreen-organizer
 
 View and reorganise an iPhone Home Screen from a Mac, over USB.
 
@@ -7,6 +7,8 @@ editor shows it like the phone does, and lets you drag a proposed layout togethe
 `state/proposed.json`. Applying the proposal to the phone is a separate, deliberate step.
 Screen Time can optionally rank your apps by real use, so the most-used ones land on
 page 1 automatically.
+
+![The editor: the proposed layout with Screen Time on each app, the Tray, and notes for Claude](docs/editor.png)
 
 ## Requirements
 
@@ -25,8 +27,8 @@ No npm, no frameworks, no build step. The editor is one HTML file.
 ## Quick start
 
 ```bash
-git clone <this repo> homescreen
-cd homescreen
+git clone https://github.com/justinleveck/homescreen-organizer.git
+cd homescreen-organizer
 bin/homescreen-setup
 ```
 
